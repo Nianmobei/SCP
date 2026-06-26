@@ -1,0 +1,16 @@
+# Python 脚本、临时工具文件
+gen_html.py
+gen2.py
+*.bin
+*.pyc
+__pycache__/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+*.swp
+*~

@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>SCP Operator — UI Prototype v4</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0a0c0e;--bg2:#0e1214;--bg3:#141a1e;
+  --border:#1e2c2e;
+  --green:#4aff9a;--green-dim:#1a4a2e;
+  --amber:#ffb84a;--amber-dim:#3a2800;
+  --red:#ff4a4a;--red-dim:#3a0a0a;
+  --blue:#4ab8ff;--blue-dim:#0a2a3a;
+  --purple:#b84aff;--purple-dim:#2a0a3a;
+  --grey:#4a5a5e;--text:#c8d8d4;--text-dim:#5a7070;
+}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden;zoom:1.22;}
+#topbar{height:34px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:16px;flex-shrink:0;z-index:10;}
+#topbar .logo{color:var(--green);font-weight:bold;font-size:12px;letter-spacing:3px;}
+.sep{color:var(--border);}
+.lbl{color:var(--text-dim);font-size:11px;}
+.val{color:var(--amber);font-size:11px;}
+.val.red{color:var(--red);}
+.bar-wrap{display:flex;align-items:center;gap:5px;}
+.bar-track{width:60px;height:5px;background:var(--bg3);border:1px solid var(--border);overflow:hidden;}
+.bar-fill{height:100%;background:var(--amber);}
+.bar-fill.danger{background:var(--red);}
+.clock{margin-left:auto;color:var(--green);font-size:14px;letter-spacing:2px;}
+#main{flex:1;display:grid;grid-template-columns:252px 1fr 288px;gap:1px;background:var(--border);overflow:hidden;position:relative;}
+.panel{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;}
+.ph{height:28px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:6px;flex-shrink:0;}
+.ph .ptitle{font-size:10px;letter-spacing:2px;color:var(--text-dim);flex:1;}
+.ph .pcount{font-size:10px;color:var(--text-dim);}
+.ph .tog{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;font-family:inherit;padding:0 3px;}
+.ph .tog:hover{color:var(--green);}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.dot.amber{background:var(--amber);}
+.dot.red{background:var(--red);}
+.panel-body{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.panel-body.collapsed{display:none;}
+#event-list{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:3px;}
+#event-list::-webkit-scrollbar{width:3px;}
+#event-list::-webkit-scrollbar-thumb{background:var(--border);}
+.ev{border:1px solid var(--border);background:var(--bg2);padding:7px 9px;cursor:pointer;transition:border-color .12s;}
+.ev:hover{border-color:var(--green-dim);}
+.ev.sel{border-color:var(--green);}
+.ev.xfer{border-color:var(--blue-dim);}
+.ev-row1{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
+.evb{font-size:9px;padding:1px 4px;border:1px solid;letter-spacing:1px;}
+.evb.l1{color:var(--text-dim);border-color:var(--grey);}
+.evb.l2{color:var(--amber);border-color:var(--amber-dim);}
+.evb.l3{color:var(--red);border-color:var(--red-dim);}
+.evb.unk{color:var(--text-dim);border-color:var(--border);}
+.ev-name{font-size:12px;color:var(--text);flex:1;}
+.ev-row2{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-dim);}
+.ev-ag{color:var(--green-dim);}
+.ev-ag.on{color:var(--green);}
+.ev-t{margin-left:auto;}
+.ev-t.w{color:var(--amber);}
+.run-tag{display:inline-flex;align-items:center;gap:3px;font-size:8px;padding:1px 4px;border:1px solid var(--blue-dim);color:var(--blue);background:var(--blue-dim);}
+.pulse{width:4px;height:4px;border-radius:50%;background:var(--blue);animation:pulse .8s ease-in-out infinite;}
+.ev-add{border:1px dashed var(--border);padding:7px 9px;color:var(--text-dim);font-size:10px;cursor:pointer;text-align:center;letter-spacing:1px;}
+.ev-add:hover{border-color:var(--green-dim);color:var(--green);}
+.ev-resolve{margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);font-size:9px;padding:1px 5px;cursor:pointer;font-family:inherit;letter-spacing:1px;flex-shrink:0;}
+.ev-resolve:hover{border-color:var(--green);color:var(--green);}
+#map-canvas{flex:1;position:relative;overflow:hidden;background:var(--bg);cursor:grab;}
+#map-canvas.panning{cursor:grabbing;}
+#map-canvas::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:4;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px);}
+#map-canvas::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse at 50% 50%,transparent 35%,rgba(10,12,14,.65) 100%);}
+#map-inner{position:absolute;width:1200px;height:900px;transform-origin:0 0;}
+#map-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+.node{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:move;user-select:none;z-index:2;}
+.nb{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;position:relative;}
+.n-name{font-size:9px;color:var(--text-dim);letter-spacing:.5px;white-space:nowrap;}
+.node-ag .nb{width:48px;height:28px;border:1px solid var(--green);background:rgba(74,255,154,.06);color:var(--green);}
+.node-ev .nb{width:24px;height:24px;border:1px solid var(--amber);background:rgba(255,184,74,.06);color:var(--amber);transform:rotate(45deg);}
+.node-ev .n-name{margin-top:4px;}
+.node-ev-hi .nb{border-color:var(--red);background:rgba(255,74,74,.08);color:var(--red);}
+.node-xfer .nb{width:38px;height:28px;border:1px solid var(--blue);background:rgba(74,184,255,.06);color:var(--blue);}
+.n-pulse{position:absolute;width:100%;height:100%;border:1px solid var(--green);animation:pulse 1.5s ease-in-out infinite;opacity:.3;}
+.sup-card{position:absolute;z-index:6;background:var(--bg2);border:1px solid #3a6a4a;min-width:120px;padding:5px 7px;font-size:10px;cursor:move;user-select:none;}
+.sc-type{font-size:9px;letter-spacing:1px;margin-bottom:3px;}
+.sc-eta{font-size:11px;font-weight:bold;color:var(--amber);}
+.sc-status{font-size:9px;color:var(--text-dim);margin-top:2px;}
+.map-ctrl{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:2px;z-index:10;}
+.mbt{width:26px;height:26px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;}
+.mbt:hover{border-color:var(--green);color:var(--green);}
+.map-legend{position:absolute;bottom:8px;left:8px;display:flex;gap:8px;z-index:10;background:rgba(10,12,14,.7);padding:4px 6px;}
+.li{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text-dim);}
+.cogn-wm{position:absolute;bottom:8px;right:8px;font-size:8px;color:var(--green-dim);letter-spacing:1px;text-align:right;line-height:1.6;z-index:10;opacity:.5;}
+#inbox-header{height:26px;display:flex;align-items:center;padding:0 8px;gap:6px;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;}
+#inbox-header:hover{background:var(--bg2);}
+.inbox-item{border:1px solid var(--amber-dim);background:var(--bg3);padding:5px 8px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.inbox-item:hover{background:var(--bg2);}
+.ii-dot{width:5px;height:5px;border-radius:50%;background:var(--amber);flex-shrink:0;animation:pulse 1s ease-in-out infinite;}
+.ii-text{font-size:11px;color:var(--text);flex:1;}
+.ii-src{font-size:9px;color:var(--text-dim);}
+.ii-btn{font-size:9px;padding:2px 6px;border:1px solid var(--amber-dim);color:var(--amber);background:none;cursor:pointer;font-family:inherit;letter-spacing:1px;}
+.ii-btn:hover{background:var(--amber-dim);}
+#inbox-body{display:flex;flex-direction:column;gap:2px;padding:4px 6px;flex-shrink:0;}
+#inbox-body.collapsed{display:none;}
+#comm-scroll{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:5px;}
+#comm-scroll::-webkit-scrollbar{width:3px;}
+#comm-scroll::-webkit-scrollbar-thumb{background:var(--border);}
+.cc{border:1px solid var(--border);background:var(--bg2);}
+.cc.online{border-left:2px solid var(--green);}
+.cc.silent{border-left:2px solid var(--grey);opacity:.7;}
+.cc.warn{border-left:2px solid var(--amber);}
+.cc-row{display:flex;align-items:center;gap:7px;padding:5px 8px;cursor:pointer;}
+.cc-row:hover{background:var(--bg3);}
+.cc-av{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);font-size:10px;font-weight:bold;flex-shrink:0;}
+.cc-av.online{border-color:var(--green);color:var(--green);}
+.cc-av.silent{border-color:var(--grey);color:var(--grey);}
+.cc-av.warn{border-color:var(--amber);color:var(--amber);}
+.cc-name{font-size:11px;color:var(--text);flex:1;}
+.cc-stat{font-size:9px;letter-spacing:.5px;flex-shrink:0;}
+.cc-stat.online{color:var(--green);}
+.cc-stat.silent{color:var(--grey);}
+.cc-stat.warn{color:var(--amber);}
+.cc-tog{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:11px;font-family:inherit;padding:0 2px;}
+.cc-preview{padding:0 8px 7px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:5px;}
+.cc-preview.open{display:flex;}
+.cc-last{font-size:10px;color:var(--text-dim);font-style:italic;line-height:1.5;}
+.cc-detail{padding:0 8px 8px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:4px;}
+.cc-detail.open{display:flex;}
+.cc-meta-row{display:flex;gap:8px;font-size:10px;padding:2px 0;}
+.cc-meta-k{color:var(--text-dim);flex-shrink:0;width:64px;}
+.cc-meta-v{color:var(--text);flex:1;}
+.cc-acts{display:flex;gap:4px;flex-wrap:wrap;}
+.cc-log{padding:4px 0;display:flex;flex-direction:column;gap:2px;max-height:100px;overflow-y:auto;}
+.cc-log::-webkit-scrollbar{width:2px;}
+.cl-row{display:flex;gap:5px;font-size:10px;color:var(--text-dim);line-height:1.5;}
+.cl-t{color:var(--text-dim);flex-shrink:0;min-width:36px;}
+.cl-spk{color:var(--green-dim);flex-shrink:0;}
+.cl-spk.ops{color:var(--blue-dim);}
+.cl-msg{color:var(--text-dim);flex:1;}
+.bs{font-size:9px;padding:2px 6px;border:1px solid var(--border);color:var(--text-dim);background:none;cursor:pointer;font-family:inherit;letter-spacing:.5px;}
+.bs:hover{border-color:var(--green);color:var(--green);}
+.bs.w{border-color:var(--amber-dim);color:var(--amber);}
+.bs.w:hover{border-color:var(--amber);}
+.bs.b{border-color:var(--blue-dim);color:var(--blue);}
+.bs.b:hover{border-color:var(--blue);}
+.bs.d{border-color:var(--red-dim);color:var(--red);}
+.bs.d:hover{border-color:var(--red);}
+#bot{height:36px;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;}
+.ba{font-size:9px;padding:3px 10px;border:1px solid var(--border);color:var(--text-dim);background:none;cursor:pointer;font-family:'Courier New',monospace;letter-spacing:.5px;}
+.ba:hover{border-color:var(--green);color:var(--green);}
+.ba.a{border-color:var(--amber-dim);color:var(--amber);}
+.ba.a:hover{border-color:var(--amber);}
+.ba.b{border-color:var(--blue-dim);color:var(--blue);}
+.ba.r{border-color:var(--red-dim);color:var(--red);}
+.bot-stat{margin-left:auto;font-size:10px;color:var(--text-dim);}
+.fw{position:fixed;background:var(--bg2);border:1px solid var(--border);display:none;flex-direction:column;z-index:500;min-width:200px;resize:both;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.6);}
+.fw.open{display:flex;}
+.fh{height:28px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:6px;cursor:move;flex-shrink:0;}
+.ft{font-size:9px;letter-spacing:2px;color:var(--text-dim);flex:1;}
+.fc{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;font-family:inherit;padding:0 2px;line-height:1;}
+.fc:hover{color:var(--red);}
+.wb{display:flex;flex:1;overflow:hidden;}
+.wsb{width:110px;border-right:1px solid var(--border);padding:4px;overflow-y:auto;flex-shrink:0;}
+.wsb-sec{font-size:8px;letter-spacing:2px;color:var(--text-dim);padding:6px 4px 3px;}
+.si{font-size:10px;padding:4px 6px;color:var(--text-dim);cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.si:hover{color:var(--text);}
+.si.act{color:var(--green);background:var(--green-dim);}
+.si-n{font-size:9px;}
+.wc{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.atb{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.ab{font-size:9px;padding:2px 8px;border:1px solid var(--border);color:var(--text-dim);background:none;cursor:pointer;font-family:inherit;}
+.ab:hover{border-color:var(--green);color:var(--green);}
+.flist{flex:1;overflow-y:auto;padding:4px;}
+.flist::-webkit-scrollbar{width:3px;}
+.flist::-webkit-scrollbar-thumb{background:var(--border);}
+.fr{display:flex;align-items:center;gap:6px;padding:5px 6px;border:1px solid transparent;cursor:pointer;font-size:10px;}
+.fr:hover{background:var(--bg3);}
+.fr.sel{border-color:var(--green-dim);background:var(--bg3);}
+.fi{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.fn{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fd{font-size:9px;color:var(--text-dim);flex-shrink:0;}
+.fst{font-size:8px;padding:1px 4px;border:1px solid;flex-shrink:0;}
+.fst.draft{color:var(--text-dim);border-color:var(--border);}
+.fst.pend{color:var(--amber);border-color:var(--amber-dim);}
+.fst.flag{color:var(--red);border-color:var(--red-dim);}
+.fst.filed{color:var(--green);border-color:var(--green-dim);}
+.fops{padding:4px 8px;border-top:1px solid var(--border);font-size:9px;color:var(--text-dim);flex-shrink:0;}
+.asrch{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'Courier New',monospace;font-size:10px;padding:2px 6px;outline:none;width:120px;}
+.pt{font-size:9px;padding:3px 8px;border:1px solid var(--border);color:var(--text-dim);background:none;cursor:pointer;font-family:inherit;}
+.pt.act{border-color:var(--blue-dim);color:var(--blue);}
+.wpt{display:flex;gap:3px;padding:4px 6px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dept-list{flex:1;overflow-y:auto;padding:4px;display:flex;flex-direction:column;gap:3px;}
+.dept-item{border:1px solid var(--border);padding:5px 7px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.dept-item:hover{border-color:var(--green-dim);}
+.dn{font-size:11px;color:var(--text);flex:1;}
+.dc{font-size:9px;color:var(--text-dim);}
+.setting-row{display:flex;align-items:center;gap:8px;padding:10px 14px;}
+.setting-label{font-size:10px;color:var(--text-dim);width:60px;flex-shrink:0;}
+.setting-val{font-size:10px;color:var(--green);width:36px;flex-shrink:0;}
+.setting-note{font-size:9px;color:var(--text-dim);padding:8px 14px;border-top:1px solid var(--border);line-height:1.6;}
+input[type=range]{flex:1;accent-color:var(--green);}
+.stab-row{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;}
+.stab{font-size:9px;padding:5px 10px;border:none;border-bottom:2px solid transparent;color:var(--text-dim);background:none;cursor:pointer;font-family:inherit;letter-spacing:.5px;}
+.stab.act{color:var(--red);border-bottom-color:var(--red);}
+.spane{display:none;flex:1;overflow-y:auto;flex-direction:column;gap:4px;padding:8px;}
+.spane.act{display:flex;}
+.su{border:1px solid var(--border);padding:7px 8px;display:flex;flex-direction:column;gap:4px;}
+.su-top{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.su-cs{font-size:12px;color:var(--red);letter-spacing:1px;flex:1;}
+.sbg{font-size:9px;padding:1px 5px;border:1px solid;}
+.sbg.sb{color:var(--green);border-color:var(--green-dim);}
+.sbg.dp{color:var(--amber);border-color:var(--amber-dim);}
+.sbg.na{color:var(--text-dim);border-color:var(--border);}
+.su-meta{font-size:10px;color:var(--text-dim);margin-bottom:5px;line-height:1.6;}
+.su-acts{display:flex;gap:5px;}
+.sf{border:1px solid var(--red-dim);background:var(--bg3);padding:10px;display:flex;flex-direction:column;gap:7px;}
+.sf-title{font-size:10px;color:var(--red);letter-spacing:1px;}
+.ssel{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Courier New',monospace;font-size:10px;padding:4px 7px;outline:none;width:100%;}
+.ssel:focus{border-color:var(--red);}
+.sta{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Courier New',monospace;font-size:10px;padding:5px 7px;outline:none;resize:vertical;min-height:55px;width:100%;}
+.sta:focus{border-color:var(--red);}
+.snote{font-size:9px;color:var(--text-dim);line-height:1.6;padding:5px 7px;border-left:2px solid var(--amber);background:var(--amber-dim);}
+.br{font-size:10px;padding:4px 10px;border:1px solid var(--red-dim);background:transparent;color:var(--red);cursor:pointer;font-family:'Courier New',monospace;letter-spacing:1px;}
+.br:hover{background:var(--red-dim);border-color:var(--red);}
+.sl-row{display:flex;gap:7px;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;}
+.sl-t{color:var(--text-dim);flex-shrink:0;width:52px;}
+.sl-m{color:var(--text);flex:1;}
+.sl-g{padding:0 4px;border:1px solid;font-size:9px;flex-shrink:0;align-self:center;}
+.sl-g.ac{color:var(--red);border-color:var(--red-dim);}
+.sl-g.dn{color:var(--green);border-color:var(--green-dim);}
+.sl-g.pd{color:var(--amber);border-color:var(--amber-dim);}
+.sct{position:fixed;background:var(--bg2);border:1px solid var(--green);width:460px;max-width:90vw;display:flex;flex-direction:column;box-shadow:0 0 32px rgba(74,255,154,.10),0 4px 24px rgba(0,0,0,.6);z-index:3000;}
+.sct.warn-terminal{border-color:var(--amber);}
+.sct-head{background:var(--bg3);border-bottom:1px solid var(--border);padding:0 8px 0 12px;height:30px;display:flex;align-items:center;gap:8px;cursor:move;user-select:none;flex-shrink:0;}
+.sct-label{font-size:8px;letter-spacing:2px;color:var(--text-dim);flex-shrink:0;}
+.sct-sep{color:var(--border);}
+.sct-av{font-size:11px;font-weight:bold;flex-shrink:0;}
+.sct-av.online{color:var(--green);}
+.sct-av.silent{color:var(--grey);}
+.sct-av.warn{color:var(--amber);}
+.sct-name{font-size:11px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sct-status{font-size:8px;padding:1px 5px;border:1px solid;letter-spacing:1px;flex-shrink:0;}
+.sct-status.live{border-color:var(--green);color:var(--green);animation:pulse 1.5s ease-in-out infinite;}
+.sct-status.idle{border-color:var(--border);color:var(--text-dim);}
+.sct-status.warn{border-color:var(--amber);color:var(--amber);}
+.sct-btn{background:none;border:none;color:var(--text-dim);font-family:'Courier New',monospace;font-size:13px;cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0;}
+.sct-btn:hover{color:var(--green);}
+.sct-btn.close:hover{color:var(--red);}
+.sct-id{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.sct-id-av{width:32px;height:32px;border:1px solid;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;flex-shrink:0;}
+.sct-id-av.online{border-color:var(--green);color:var(--green);}
+.sct-id-av.silent{border-color:var(--grey);color:var(--grey);}
+.sct-id-av.warn{border-color:var(--amber);color:var(--amber);}
+.sct-id-info{flex:1;}
+.sct-id-name{font-size:11px;color:var(--text);letter-spacing:.3px;}
+.sct-id-zone{font-size:9px;color:var(--text-dim);margin-top:2px;letter-spacing:.5px;}
+.sct-id-enc{font-size:8px;color:var(--green-dim);margin-left:auto;letter-spacing:.5px;flex-shrink:0;text-align:right;line-height:1.5;}
+.sct-log{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;max-height:200px;overflow-y:auto;}
+.sct-log::-webkit-scrollbar{width:2px;}
+.sct-log::-webkit-scrollbar-thumb{background:var(--green-dim);}
+.sct-log-label{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;}
+.sct-log-text{font-size:11px;color:var(--text);line-height:1.9;white-space:pre-wrap;border-left:2px solid var(--green-dim);padding-left:8px;}
+.sct-cmd{padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sct-cmd-label{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;}
+.sct-cmd-opts{display:flex;flex-wrap:wrap;gap:4px;}
+.sct-opt{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'Courier New',monospace;font-size:10px;padding:4px 9px;cursor:pointer;transition:all .12s;text-align:left;}
+.sct-opt:hover{border-color:var(--green);color:var(--green);background:rgba(74,255,154,.04);}
+.sct-opt.warn{border-color:var(--amber-dim);color:var(--amber);}
+.sct-opt.warn:hover{border-color:var(--amber);}
+.sct-opt:disabled{opacity:.4;cursor:default;}
+.sct-foot{padding:6px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.sct-ts{font-size:9px;color:var(--text-dim);flex:1;letter-spacing:.5px;}
+.sct-close-btn{background:transparent;border:1px solid var(--red-dim);color:var(--red);font-family:'Courier New',monospace;font-size:9px;padding:3px 10px;cursor:pointer;letter-spacing:.5px;}
+.sct-close-btn:hover{background:var(--red-dim);}
+#terminal-dock{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:2900;pointer-events:none;}
+.sct-mini{pointer-events:auto;background:var(--bg2);border:1px solid var(--green);display:flex;align-items:center;gap:6px;padding:3px 10px;cursor:pointer;font-family:'Courier New',monospace;font-size:9px;color:var(--green);letter-spacing:.5px;max-width:180px;}
+.sct-mini:hover{background:var(--green-dim);}
+.sct-mini.warn{border-color:var(--amber);color:var(--amber);}
+.sct-mini-dot{width:4px;height:4px;border-radius:50%;background:var(--green);animation:pulse 1.2s ease-in-out infinite;flex-shrink:0;}
+.sct-mini.warn .sct-mini-dot{background:var(--amber);}
+#speed-ind{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--amber);color:var(--amber);font-family:'Courier New',monospace;font-size:10px;padding:3px 12px;letter-spacing:2px;display:none;z-index:4000;pointer-events:none;}
+#speed-ind.on{display:block;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.5);}}
+@keyframes blink{50%{opacity:0;}}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span class="logo">SCP//OPS-7</span><span class="sep">|</span>
+  <span class="lbl">OPERATOR</span><span class="val">LV.2 张明亮</span><span class="sep">|</span>
+  <span class="lbl">活跃</span><span class="val">5</span><span class="sep">|</span>
+  <span class="lbl">调查员</span><span class="val">3/5</span><span class="sep">|</span>
+  <div class="bar-wrap"><span class="lbl">暴露</span><div class="bar-track"><div class="bar-fill" style="width:28%"></div></div><span class="val">28%</span></div><span class="sep">|</span>
+  <div class="bar-wrap"><span class="lbl">失控</span><div class="bar-track"><div class="bar-fill danger" style="width:72%"></div></div><span class="val red">72%</span></div>
+  <span class="clock" id="clock">D+7 08:00</span>
+  <button class="ba" style="margin-left:8px;height:24px;padding:0 8px;font-size:10px" onclick="openW('win-settings')">⚙ 设置</button>
+</div>
+<div id="terminal-dock"></div>
+<div id="speed-ind">⏩ 时间加速 ×10 — 松开空格恢复</div>
+<div id="main">
+<div class="panel">
+  <div class="ph"><div class="dot amber"></div><span class="ptitle">EVENT BOARD</span><span class="pcount">5件</span><button class="tog" onclick="togglePanel(this)">▼</button></div>
+  <div class="panel-body">
+    <div id="event-list">
+      <div class="ev sel" data-node-id="n-e031" onclick="selEv(this)"><div class="ev-row1"><span class="evb l3">III</span><span class="ev-name">第十一封信</span><span style="color:var(--red);font-size:10px">▲</span><button class="ev-resolve" title="结案" onclick="event.stopPropagation();resolveEvent(this.closest('.ev'),this.closest('.ev').dataset.nodeId)">✓</button></div><div class="ev-row2"><span class="ev-ag on">● 艾娃</span><span>模因/扩散</span><span class="ev-t w">D+3</span></div></div>
+      <div class="ev xfer" data-node-id="n-e027" onclick="selEv(this)"><div class="ev-row1"><span class="evb l2">II</span><span class="ev-name">北区X-17异响</span><span class="run-tag"><span class="pulse"></span>转接运行</span><button class="ev-resolve" title="结案" onclick="event.stopPropagation();resolveEvent(this.closest('.ev'),this.closest('.ev').dataset.nodeId)">✓</button></div><div class="ev-row2"><span class="ev-ag" style="color:var(--blue)">● ε6接管</span><span>内部</span><span class="ev-t">D+6</span></div></div>
+      <div class="ev" data-node-id="n-e029" onclick="selEv(this)"><div class="ev-row1"><span class="evb unk">?</span><span class="ev-name">值班室的人</span><button class="ev-resolve" title="结案" onclick="event.stopPropagation();resolveEvent(this.closest('.ev'),this.closest('.ev').dataset.nodeId)">✓</button></div><div class="ev-row2"><span class="ev-ag on">● 林照野</span><span>未定性</span><span class="ev-t">D+1</span></div></div>
+      <div class="ev" data-node-id="" onclick="selEv(this)"><div class="ev-row1"><span class="evb l1">I</span><span class="ev-name">狗叫了三天</span><button class="ev-resolve" title="结案" onclick="event.stopPropagation();resolveEvent(this.closest('.ev'),this.closest('.ev').dataset.nodeId)">✓</button></div><div class="ev-row2"><span class="ev-ag">— 未分配</span><span>民众举报</span><span class="ev-t">D+0</span></div></div>
+      <div class="ev" data-node-id="n-e026" onclick="selEv(this)"><div class="ev-row1"><span class="evb l2">II</span><span class="ev-name">7号仓库气味</span><button class="ev-resolve" title="结案" onclick="event.stopPropagation();resolveEvent(this.closest('.ev'),this.closest('.ev').dataset.nodeId)">✓</button></div><div class="ev-row2"><span class="ev-ag on">● 福斯</span><span>内部上报</span><span class="ev-t w">D+5▲</span></div></div>
+      <div class="ev-add">+ 标记新事件</div>
+    </div>
+  </div>
+</div>
+<div class="panel">
+  <div class="ph"><div class="dot"></div><span class="ptitle">ZONE MAP <span style="font-size:8px;color:var(--red-dim)">[COGN-FILTERED]</span></span><span class="pcount" id="zoom-lbl">40%</span><button class="tog" onclick="togglePanel(this)">▼</button></div>
+  <div class="panel-body">
+    <div id="map-canvas">
+      <svg id="map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="map-inner">
+        <div class="node node-ag" id="n-av" style="left:680px;top:300px"><div class="nb">AV<div class="n-pulse"></div></div><div class="n-name">艾娃 #002</div><div class="n-name" style="color:var(--green-dim)">ZONE-B</div></div>
+        <div class="node node-ag" id="n-lz" style="left:400px;top:480px"><div class="nb">LZ</div><div class="n-name">林照野 #001</div><div class="n-name" style="color:var(--grey)">○ 沉默</div></div>
+        <div class="node node-ag" id="n-rf" style="left:300px;top:350px"><div class="nb">RF</div><div class="n-name">福斯 #003</div><div class="n-name" style="color:var(--amber)">待接异常</div></div>
+        <div class="node node-ev node-ev-hi" id="n-e031" style="left:820px;top:290px"><div class="nb"></div><div class="n-name">第十一封信</div><div class="n-name" style="color:var(--red-dim)">EVT-031</div></div>
+        <div class="node node-ev" id="n-e029" style="left:430px;top:600px"><div class="nb"></div><div class="n-name">值班室的人</div><div class="n-name" style="color:var(--amber-dim)">EVT-029</div></div>
+        <div class="node node-ev" id="n-e027" style="left:520px;top:420px"><div class="nb"></div><div class="n-name">X-17异响</div><div class="n-name" style="color:var(--blue-dim)">EVT-027</div></div>
+        <div class="node node-ev" id="n-e026" style="left:200px;top:350px"><div class="nb"></div><div class="n-name">7号仓库气味</div><div class="n-name" style="color:var(--amber-dim)">EVT-026</div></div>
+        <div class="node node-xfer" id="n-x17" style="left:640px;top:450px"><div class="nb">ε6<div class="n-pulse"></div></div><div class="n-name">X-17接管</div></div>
+        <div class="sup-card" id="sc-med" style="left:870px;top:490px"><div class="sc-type">◈ 医疗待命</div><div class="sc-eta" id="sc-eta">ETA 00:42</div><div class="sc-status">前往 第十一封信</div></div>
+      </div>
+      <div class="map-ctrl"><button class="mbt" onclick="mzoom(1.2)">+</button><button class="mbt" onclick="mzoom(1/1.2)">−</button><button class="mbt" onclick="mreset()">⊙</button></div>
+      <div class="map-legend">
+        <div class="li"><div style="width:14px;height:10px;border:1px solid var(--green)"></div>调查员</div>
+        <div class="li"><div style="width:10px;height:10px;border:1px solid var(--amber);transform:rotate(45deg)"></div>&nbsp;事件</div>
+        <div class="li"><div style="width:10px;height:10px;border:1px solid var(--red)"></div>高危</div>
+        <div class="li"><div style="width:14px;height:10px;border:1px solid var(--blue)"></div>转接</div>
+        <div class="li"><div style="width:14px;height:10px;border:1px solid #3a6a4a"></div>支援</div>
+      </div>
+      <div class="cogn-wm">COGNITIVE HAZARD FILTER<br>COORDINATES REDACTED<br>OPS PROTOCOL 7.3</div>
+    </div>
+  </div>
+</div>
+<div class="panel">
+  <div class="ph"><div class="dot"></div><span class="ptitle">COMMUNICATIONS</span><span class="pcount">3频</span><button class="tog" onclick="togglePanel(this)">▼</button></div>
+  <div class="panel-body">
+    <div id="inbox-header" onclick="toggleInbox()">
+      <div class="dot amber"></div>
+      <span style="font-size:9px;letter-spacing:1px;color:var(--text-dim);flex:1">INCOMING — 待接入</span>
+      <span style="font-size:9px;color:var(--amber)">2</span>
+      <button id="inbox-tog" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:11px;font-family:inherit;padding:0 3px">▼</button>
+    </div>
+    <div id="inbox-body">
+      <div class="inbox-item"><div class="ii-dot"></div><div><div class="ii-text">陌生来电 — 自称目击异常现象</div><div class="ii-src">内部上报 · 1分钟前</div></div><button class="ii-btn">接入</button><button class="ii-btn" style="border-color:var(--border);color:var(--text-dim)">忽略</button></div>
+      <div class="inbox-item"><div class="ii-dot"></div><div><div class="ii-text">站点C-7 — 请求协调支援</div><div class="ii-src">内部上报 · 8分钟前</div></div><button class="ii-btn">接入</button><button class="ii-btn" style="border-color:var(--border);color:var(--text-dim)">忽略</button></div>
+    </div>
+    <div id="comm-scroll">
+      <div class="cc online">
+        <div class="cc-row" onclick="cycleCC(this)"><div class="cc-av online">AV</div><div class="cc-name">艾娃·塞利克 #002</div><div class="cc-stat online">● 在线</div><button class="cc-tog" onclick="event.stopPropagation();cycleCC(this.closest('.cc').querySelector('.cc-row'))">▼</button></div>
+        <div class="cc-preview open"><div class="cc-last">"第12封信刚到。新增接触者2人，其中一人出现重复诵读……"</div><div class="cc-acts"><button class="bs" onclick="openDetail(this)">详情▶</button><button class="bs w">申请支援</button><button class="bs b" onclick="openTransfer('艾娃·塞利克','第十一封信')">转接</button></div></div>
+        <div class="cc-detail">
+          <div class="cc-meta-row"><span class="cc-meta-k">当前区位</span><span class="cc-meta-v">ZONE-B / 未知坐标</span></div>
+          <div class="cc-meta-row"><span class="cc-meta-k">关联事件</span><span class="cc-meta-v" style="color:var(--red)">第十一封信 III级 模因</span></div>
+          <div class="cc-meta-row"><span class="cc-meta-k">上次回报</span><span class="cc-meta-v">D+3 14:22</span></div>
+          <div class="cc-meta-row"><span class="cc-meta-k">污染风险</span><span class="cc-meta-v" style="color:var(--green)">低</span></div>
+          <div class="cc-log" id="log-av"><div class="cl-row"><span class="cl-t">D+3 14:22</span><span class="cl-spk">AV:</span><span class="cl-msg">建议立即封锁邮件分拣站</span></div><div class="cl-row"><span class="cl-t">D+3 14:25</span><span class="cl-spk ops">OPS:</span><span class="cl-msg">正在申请医疗待命，等待批准</span></div><div class="cl-row"><span class="cl-t">D+3 14:26</span><span class="cl-spk">AV:</span><span class="cl-msg">收到，保持观察</span></div></div>
+          <div class="cc-acts"><button class="bs w">申请支援</button><button class="bs d">上报污染</button><button class="bs b" onclick="openTransfer('艾娃·塞利克','第十一封信')">转接</button><button class="bs" onclick="requestStatus('AV','艾娃·塞利克')">请求状态</button></div>
+        </div>
+      </div>
+      <div class="cc silent">
+        <div class="cc-row" onclick="cycleCC(this)"><div class="cc-av silent">LZ</div><div class="cc-name">林照野 #001</div><div class="cc-stat silent">○ 沉默 3h42m</div><button class="cc-tog" onclick="event.stopPropagation();cycleCC(this.closest('.cc').querySelector('.cc-row'))">▼</button></div>
+        <div class="cc-preview"><div class="cc-last">"……去了。保持静默。" — 3h前</div><div class="cc-acts"><button class="bs">查档案</button><button class="bs b" onclick="openTransfer('林照野','值班室的人')">转接</button><button class="bs" onclick="requestStatus('LZ','林照野')">请求状态</button></div></div>
+        <div class="cc-detail">
+          <div class="cc-meta-row"><span class="cc-meta-k">当前区位</span><span class="cc-meta-v">ZONE-D / 未知坐标</span></div>
+          <div class="cc-meta-row"><span class="cc-meta-k">关联事件</span><span class="cc-meta-v" style="color:var(--amber)">值班室的人 未定性</span></div>
+          <div class="cc-meta-row"><span class="cc-meta-k">上次回报</span><span class="cc-meta-v">D+1 09:40</span></div>
+          <div class="cc-log" id="log-lz"><div class="cl-row"><span class="cl-t">D+1 09:40</span><span class="cl-spk">LZ:</span><span class="cl-msg">进入目标楼栋，保持静默</span></div></div>
+          <div class="cc-acts"><button class="bs" onclick="requestStatus('LZ','林照野')">请求状态</button><button class="bs b" onclick="openTransfer('林照野','值班室的人')">转接</button></div>
+        </div>
+      </div>
+      <div class="cc warn">
+        <div class="cc-row" onclick="cycleCC(this)"><div class="cc-av warn">RF</div><div class="cc-name">福斯 #003</div><div class="cc-stat warn">▲ 待接异常</div><button class="cc-tog" onclick="event.stopPropagation();cycleCC(this.closest('.cc').querySelector('.cc-row'))">▼</button></div>
+        <div class="cc-preview"><div class="cc-last">"……气味来自地下储仓。需要你来判断。"</div><div class="cc-acts"><button class="bs w">申请支援</button><button class="bs b" onclick="openTransfer('福斯','7号仓库气味')">转接</button><button class="bs" onclick="requestStatus('RF','福斯')">请求状态</button></div></div>
+        <div class="cc-detail">
+          <div class="cc-meta-row"><span class="cc-meta-k">当前区位</span><span class="cc-meta-v">ZONE-C / 7号仓库</span></div>
+          <div class="cc-meta-row"><span class="cc-meta-k">关联事件</span><span class="cc-meta-v" style="color:var(--amber)">7号仓库气味 II级</span></div>
+          <div class="cc-meta-row"><span class="cc-meta-k">上次回报</span><span class="cc-meta-v">D+5 17:50</span></div>
+          <div class="cc-log" id="log-rf"><div class="cl-row"><span class="cl-t">D+5 17:50</span><span class="cl-spk">RF:</span><span class="cl-msg">气味来自地下储仓，需要判断</span></div></div>
+          <div class="cc-acts"><button class="bs" onclick="requestStatus('RF','福斯')">请求状态</button><button class="bs b" onclick="openTransfer('福斯','7号仓库气味')">转接</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="bot">
+  <button class="ba" onclick="openW('wa')">[ 档案库 ]</button>
+  <button class="ba a">[ 申请支援 ]</button>
+  <button class="ba b" onclick="openW('wt')">[ 部门转接 ]</button>
+  <button class="ba">[ 标记等级 ]</button>
+  <button class="ba r" onclick="openW('ws')">[ 特遣队调度 ]</button>
+  <button class="ba a">[ 升级申请 ]</button>
+  <span class="bot-stat">SHIFT 07 | 值班中 | 复盘 <span style="color:var(--amber)">72h</span></span>
+</div>
+<div class="fw" id="win-settings" style="top:50px;left:calc(50% - 180px);width:360px;min-height:0;resize:none;border-color:var(--green);">
+  <div class="fh" onmousedown="startDrag(event,'win-settings')"><span class="ft">SETTINGS — 界面设置</span><button class="fc" onclick="closeW('win-settings')">×</button></div>
+  <div class="setting-row"><span class="setting-label">字体大小</span><input type="range" id="zoom-range" min="0.8" max="1.8" step="0.05" value="1.22" oninput="applyZoom(this.value)"><span class="setting-val" id="zoom-display">122%</span></div>
+  <div class="setting-row" style="gap:6px"><span class="setting-label">快速设置</span>
+    <button class="bs" onclick="applyZoom(0.9);document.getElementById('zoom-range').value=0.9">小</button>
+    <button class="bs" onclick="applyZoom(1.1);document.getElementById('zoom-range').value=1.1">中</button>
+    <button class="bs" onclick="applyZoom(1.22);document.getElementById('zoom-range').value=1.22">默认</button>
+    <button class="bs" onclick="applyZoom(1.4);document.getElementById('zoom-range').value=1.4">大</button>
+    <button class="bs" onclick="applyZoom(1.6);document.getElementById('zoom-range').value=1.6">特大</button>
+  </div>
+  <div class="setting-note">调整后立即生效，重载页面将恢复默认。</div>
+</div>
+<div class="fw" id="wa" style="top:60px;left:80px;width:580px;height:460px;">
+  <div class="fh" onmousedown="startDrag(event,'wa')"><span class="ft">ARCHIVE SYSTEM — 档案库</span><input class="asrch" placeholder="搜索..."><button class="fc" onclick="closeW('wa')">×</button></div>
+  <div class="wb">
+    <div class="wsb">
+      <div class="wsb-sec">分区</div>
+      <div class="si act" onclick="swSI(this)">全部文件<span class="si-n">18</span></div>
+      <div class="si" onclick="swSI(this)">待处理<span class="si-n" style="color:var(--amber)">4</span></div>
+      <div class="si" onclick="swSI(this)">已归档<span class="si-n" style="color:var(--green)">9</span></div>
+      <div class="si" onclick="swSI(this)">已转接<span class="si-n" style="color:var(--blue)">3</span></div>
+      <div class="si" onclick="swSI(this)">已标记<span class="si-n" style="color:var(--red)">2</span></div>
+      <div class="wsb-sec">类型</div>
+      <div class="si" onclick="swSI(this)">事件报告</div>
+      <div class="si" onclick="swSI(this)">调查员档案</div>
+      <div class="si" onclick="swSI(this)">申请记录</div>
+      <div class="si" onclick="swSI(this)">部门联络</div>
+    </div>
+    <div class="wc">
+      <div class="atb"><button class="ab">提交</button><button class="ab">标记</button><button class="ab" onclick="archAct('移动')">移动</button><button class="ab" onclick="archAct('归档')">归档</button></div>
+      <div class="flist">
+        <div class="fr sel" onclick="selFR(this)"><div class="fi">📋</div><div class="fn">EVT-031 第十一封信 回报日志</div><div class="fst flag">已标记</div><div class="fd">06-26</div></div>
+        <div class="fr" onclick="selFR(this)"><div class="fi">📋</div><div class="fn">EVT-029 值班室的人 初始记录</div><div class="fst draft">草稿</div><div class="fd">06-25</div></div>
+        <div class="fr" onclick="selFR(this)"><div class="fi">📋</div><div class="fn">MTF-Alpha申请记录 D+3</div><div class="fst pend">待审批</div><div class="fd">06-24</div></div>
+        <div class="fr" onclick="selFR(this)"><div class="fi">📋</div><div class="fn">医疗待命申请 EVT-031</div><div class="fst pend">待审批</div><div class="fd">06-26</div></div>
+        <div class="fr" onclick="selFR(this)"><div class="fi">📋</div><div class="fn">X-17转接确认 市政部门</div><div class="fst filed">已归档</div><div class="fd">06-23</div></div>
+        <div class="fr" onclick="selFR(this)"><div class="fi">📋</div><div class="fn">EVT-026 7号仓库 初始记录</div><div class="fst draft">草稿</div><div class="fd">06-26</div></div>
+      </div>
+      <div class="fops"><span>选择文件后操作</span></div>
+    </div>
+  </div>
+</div>
+<div class="fw" id="wt" style="top:80px;left:200px;width:420px;height:440px;">
+  <div class="fh" onmousedown="startDrag(event,'wt')"><span class="ft">TRANSFER — 部门转接</span><span style="font-size:9px;color:var(--blue);margin-left:4px" id="xt-tgt">— / —</span><button class="fc" onclick="closeW('wt')">×</button></div>
+  <div class="wpt"><button class="pt act" onclick="swPT(this)">常规协助</button><button class="pt" onclick="swPT(this)">特殊力量</button></div>
+  <div class="dept-list">
+    <div class="dept-item" onclick="deptCk(this)"><div class="dn">对应地区市政部门</div><div class="dc">常规 / 即时</div></div>
+    <div class="dept-item" onclick="deptCk(this)"><div class="dn">地区警务局</div><div class="dc">常规 / 即时</div></div>
+    <div class="dept-item" onclick="deptCk(this)"><div class="dn">消防控制局</div><div class="dc">常规 / 即时</div></div>
+    <div class="dept-item" onclick="deptCk(this)"><div class="dn">医疗急救中心</div><div class="dc">常规 / 即时</div></div>
+    <div class="dept-item dept-special" onclick="deptCk(this)"><div class="dn">认知监听小组 / COGWATCH</div><div class="dc">特殊 / 需审批</div></div>
+    <div class="dept-item dept-special" onclick="deptCk(this)"><div class="dn">佣兵武装 / PARTISAN-C</div><div class="dc">特殊 / 需审批</div></div>
+    <div class="dept-item dept-special" onclick="deptCk(this)"><div class="dn">控制小组 / CONTAIN-OPS</div><div class="dc">特殊 / 需审批</div></div>
+  </div>
+</div>
+<div class="fw" id="ws" style="top:85px;left:280px;width:580px;height:420px;">
+  <div class="fh" onmousedown="startDrag(event,'ws')"><span class="ft">SRT DISPATCH — 特遣队调度</span><button class="fc" onclick="closeW('ws')">×</button></div>
+  <div class="stab-row">
+    <button class="stab act" onclick="swSTab(this,'sp1')">待命部队</button>
+    <button class="stab" onclick="swSTab(this,'sp2')">新建申请</button>
+    <button class="stab" onclick="swSTab(this,'sp3')">调度日志</button>
+  </div>
+  <div class="spane act" id="sp1">
+    <div class="su"><div class="su-top"><span class="su-cs">MTF Alpha-1 "红右手"</span><span class="sbg sb">待命</span></div><div class="su-meta">专长：近距离压制 / 认知防护<br>当前状态：基地待命，响应时间 &lt;30分钟</div><div class="su-acts"><button class="bs w">申请调度</button><button class="bs">查看详情</button></div></div>
+    <div class="su"><div class="su-top"><span class="su-cs">MTF Epsilon-6 "村庄守护者"</span><span class="sbg dp">已部署</span></div><div class="su-meta">专长：城市清除 / 异常处置<br>当前位置：X-17区域 — 接管清查中</div><div class="su-acts"><button class="bs">查看通报</button></div></div>
+    <div class="su"><div class="su-top"><span class="su-cs">MTF Nu-7 "锤子落下"</span><span class="sbg na">不可用</span></div><div class="su-meta">专长：大规模武装压制<br>当前状态：异地任务中，预计72h后返回</div></div>
+  </div>
+  <div class="spane" id="sp2">
+    <div class="sf">
+      <div class="sf-title">新建特遣队调度申请</div>
+      <div><div style="font-size:9px;color:var(--text-dim);margin-bottom:3px">关联事件</div><select class="ssel"><option>第十一封信（III级 模因）EVT-031</option><option>值班室的人（未定性）EVT-029</option></select></div>
+      <div><div style="font-size:9px;color:var(--text-dim);margin-bottom:3px">申请特遣队</div><select class="ssel"><option>MTF Alpha-1"红右手"（待命）</option><option disabled>MTF Epsilon-6（已部署）</option><option disabled>MTF Nu-7（不可用）</option></select></div>
+      <div><div style="font-size:9px;color:var(--text-dim);margin-bottom:3px">行动说明</div><textarea class="sta" placeholder="威胁性质、调查员状态、建议行动..."></textarea></div>
+      <div><div style="font-size:9px;color:var(--text-dim);margin-bottom:3px">接管方式</div><select class="ssel"><option>特遣队接管，继续接收通报</option><option>协作，调查员保留指挥权</option></select></div>
+      <div class="snote">★ 批准后特遣队接管，玩家仍收后续通报，但无法直接干预。</div>
+      <button class="br" style="align-self:flex-start" onclick="submitSRT()">提交申请</button>
+    </div>
+  </div>
+  <div class="spane" id="sp3">
+    <div class="sl-row"><span class="sl-t">D+6 14:30</span><span class="sl-m">ε6 外围封锁完成，进入清查</span><span class="sl-g ac">进行中</span></div>
+    <div class="sl-row"><span class="sl-t">D+4 09:15</span><span class="sl-m">X-17移交ε6，接管确认</span><span class="sl-g dn">批准</span></div>
+    <div class="sl-row"><span class="sl-t">D+3 22:40</span><span class="sl-m">调度申请提交，等待审批</span><span class="sl-g pd">待批</span></div>
+  </div>
+</div>
+<script>
+
+// ============================================================
+// TOAST
+// ============================================================
+const toastContainer = document.createElement('div');
+toastContainer.style.cssText='position:fixed;top:44px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:4px;pointer-events:none;';
+document.body.appendChild(toastContainer);
+function toast(msg, type='info', dur=3000){
+  const C={info:'var(--green)',warn:'var(--amber)',error:'var(--red)',blue:'var(--blue)'};
+  const el=document.createElement('div');
+  el.style.cssText=`background:var(--bg2);border:1px solid ${C[type]||C.info};color:${C[type]||C.info};font-family:'Courier New',monospace;font-size:11px;padding:6px 12px;max-width:280px;pointer-events:auto;opacity:1;transition:opacity .3s;letter-spacing:.5px;`;
+  el.textContent=msg;
+  toastContainer.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),300);},dur);
+}
+
+// ============================================================
+// 游戏时间系统 (1 real second = 1 game minute; Space x10)
+// ============================================================
+const GT = {
+  day:7, hour:8, min:0, speed:1, paused:false,
+  tick(){
+    if(this.paused)return;
+    this.min+=this.speed;
+    while(this.min>=60){this.min-=60;this.hour++;}
+    while(this.hour>=24){this.hour-=24;this.day++;}
+    this._ui(); this._check();
+  },
+  fmt(){return 'D+'+this.day+' '+String(this.hour).padStart(2,'0')+':'+String(this.min).padStart(2,'0');},
+  _ui(){
+    const cl=document.getElementById('clock');
+    if(cl)cl.textContent=this.fmt();
+    if(eta>0){eta-=this.speed;if(eta<0)eta=0;}
+    const ee=document.getElementById('sc-eta');
+    if(ee){if(eta<=0){ee.textContent='已抵达';ee.style.color='var(--green)';}
+    else{const m=String(Math.floor(eta/60)).padStart(2,'0'),s=String(eta%60).padStart(2,'0');ee.textContent='ETA '+m+':'+s;}}
+  },
+  _sched:[],
+  scheduleAt(d,fn){this._sched.push({...d,fn});},
+  _check(){
+    this._sched=this._sched.filter(s=>{
+      const due=(s.atDay*1440+s.atHour*60+s.atMin)<=(this.day*1440+this.hour*60+this.min);
+      if(due){s.fn();return false;}return true;
+    });
+  }
+};
+let eta=42*60;
+setInterval(()=>GT.tick(),1000);
+GT._ui();
+
+let spaceHeld=false;
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&!spaceHeld&&!e.target.matches('input,textarea,select')){
+    e.preventDefault();spaceHeld=true;GT.speed=10;
+    const si=document.getElementById('speed-ind');if(si)si.classList.add('on');
+  }
+});
+document.addEventListener('keyup',e=>{
+  if(e.code==='Space'){
+    spaceHeld=false;GT.speed=1;
+    const si=document.getElementById('speed-ind');if(si)si.classList.remove('on');
+  }
+});
+
+// ============================================================
+// 通讯终端系统
+// ============================================================
+const AGENTS={
+  'AV':{name:'艾娃·塞利克 #002',zone:'ZONE-B · 第十一封信',cls:'online',logId:'log-av'},
+  'LZ':{name:'林照野 #001',zone:'ZONE-D · 值班室的人',cls:'silent',logId:'log-lz'},
+  'RF':{name:'福斯 #003',zone:'ZONE-C · 7号仓库',cls:'warn',logId:'log-rf'}
+};
+const CALL_EVENTS=[
+  {id:'call-av-1',agCode:'AV',triggerMin:7*1440+8*60+15,
+   report:'接线员，这里是艾娃。\n\n第12封信今早出现了。收件人是同一栋楼的三户居民，邮戳显示的寄件地址不存在。\n\n信件内容经初步判读，存在重复短语结构，我怀疑是低阶模因载体。\n\n目前三名接触者均表现正常，但我需要指示——是否申请认知评估小组介入？',
+   options:[
+     {text:'批准申请认知评估小组',reply:'收到，我这就联系评估小组。保持观察，不要让接触者离开视线范围。',type:'normal'},
+     {text:'继续观察，暂缓申请',reply:'明白。我会持续监控，24小时内再次回报。',type:'normal'},
+     {text:'要求提交信件样本后再决定',reply:'了解。我会妥善封存一份样本，通过标准渠道送检，预计明天能有结果。',type:'warn'}
+   ]},
+  {id:'call-av-2',agCode:'AV',triggerMin:7*1440+11*60+0,
+   report:'接线员，紧急回报。\n\n第13封信到了。这次收件人包括我的线人——他刚才打电话给我，声音有些不对劲。\n\n我需要支援。',
+   options:[
+     {text:'立即申请医疗支援待命',reply:'收到。请确认你当前的坐标，支援预计40分钟后抵达。',type:'warn'},
+     {text:'让线人远离现场，你继续监控',reply:'明白，我来处理。如果有变化立刻联系你。',type:'normal'},
+     {text:'请求状态报告，等待更多信息',reply:'……好。我再观察一小时。',type:'normal'}
+   ]},
+  {id:'call-lz-1',agCode:'LZ',triggerMin:7*1440+14*60+30,
+   report:'……接线员。\n\n（沉默3秒）\n\n我在值班室找到了什么。\n\n你们说那个人失踪了——但失踪记录是伪造的。档案里有他的签名，日期是他"失踪"后第三天。\n\n我需要确认：基金会内部是否有人知道这件事？',
+   options:[
+     {text:'告知正在核查，让他先撤离现场',reply:'（沉默）……好。',type:'warn'},
+     {text:'要求他继续收集证据',reply:'明白。',type:'normal'},
+     {text:'上报内部异常，申请核查',reply:'……谢谢告知。',type:'normal'}
+   ]},
+  {id:'call-rf-1',agCode:'RF',triggerMin:7*1440+16*60+0,
+   report:'接线员，福斯报告。\n\n7号仓库情况已稳定，气味来源确认是腐坏的有机化肥，无异常。\n\n建议关闭本次调查，移交市政部门处理。',
+   options:[
+     {text:'批准关闭，移交市政',reply:'收到，感谢配合。我来办理档案归档。',type:'normal'},
+     {text:'要求进一步检查后再关闭',reply:'……明白。我再查一遍。',type:'warn'},
+     {text:'批准关闭，但保留监控标记',reply:'了解，我已记录。',type:'normal'}
+   ]}
+];
+
+const callQueue=[];
+let termCount=0;
+const termMap={};
+
+function queueCall(evt){
+  if(termMap[evt.id])return;
+  openTerminal(evt);
+}
+function openTerminal(evt){
+  const ag=AGENTS[evt.agCode];
+  termCount++;
+  const tid='sct-'+evt.id;
+  const bx=Math.round(window.innerWidth/2-230+(termCount-1)*28);
+  const by=Math.round(window.innerHeight/2-220+(termCount-1)*28);
+  const win=document.createElement('div');
+  win.className='sct'+(ag.cls==='warn'?' warn-terminal':'');
+  win.id=tid;
+  win.style.cssText=`left:${bx}px;top:${by}px;`;
+  const cl=ag.cls||'online';
+  win.innerHTML=`
+    <div class="sct-head" onmousedown="termDrag(event,'${tid}')">
+      <span class="sct-label">SECURE COMMS</span>
+      <span class="sct-sep">|</span>
+      <span class="sct-av ${cl}">${evt.agCode}</span>
+      <span class="sct-name">${ag.name}</span>
+      <span class="sct-status live" id="${tid}-badge">ACTIVE LINK</span>
+      <button class="sct-btn" onclick="minimizeTerminal('${tid}')" title="最小化">─</button>
+      <button class="sct-btn close" onclick="closeTerminal('${tid}')" title="终止连接">×</button>
+    </div>
+    <div class="sct-id">
+      <div class="sct-id-av ${cl}">${evt.agCode}</div>
+      <div class="sct-id-info">
+        <div class="sct-id-name">${ag.name}</div>
+        <div class="sct-id-zone">${ag.zone}</div>
+      </div>
+      <div class="sct-id-enc">ENC CHANNEL 7<br>AES-REDACTED<br>${GT.fmt()}</div>
+    </div>
+    <div class="sct-log">
+      <div class="sct-log-label">TRANSMISSION LOG ─────────────────</div>
+      <div class="sct-log-text" id="${tid}-text"></div>
+    </div>
+    <div class="sct-cmd" id="${tid}-cmd">
+      <div class="sct-cmd-label" id="${tid}-cmd-label" style="visibility:hidden">OPERATOR RESPONSE ────────────────</div>
+      <div class="sct-cmd-opts" id="${tid}-opts" style="visibility:hidden"></div>
+    </div>
+    <div class="sct-foot">
+      <span class="sct-ts" id="${tid}-ts">[ ${GT.fmt()} ]  FIELD TERMINAL ACTIVE</span>
+      <button class="sct-close-btn" onclick="closeTerminal('${tid}')">[ 终止连接 ]</button>
+    </div>`;
+  document.body.appendChild(win);
+  termMap[evt.id]=win;
+  bringTermFront(win);
+  const textEl=win.querySelector('#'+tid+'-text');
+  const logEl=win.querySelector('.sct-log');
+  const cursor=document.createElement('span');
+  cursor.id=tid+'-cursor';
+  cursor.style.cssText='display:inline-block;width:7px;height:1em;background:var(--green);margin-left:2px;vertical-align:text-bottom;animation:blink .7s step-end infinite;opacity:.9;';
+  textEl.after(cursor);
+  let ci=0;const txt=evt.report;
+  const PAUSE={'。':320,'，':140,'…':500,'—':200,'\n':260,'！':280,'？':280,'、':100};
+  function typeNext(){
+    if(ci>=txt.length){cursor.style.display='none';renderOpts(tid,evt,ag);return;}
+    const ch=txt[ci];ci++;
+    textEl.textContent+=ch;
+    logEl.scrollTop=9999;
+    const d=PAUSE[ch]!==undefined?PAUSE[ch]:(ci%3===0?28:18);
+    setTimeout(typeNext,d);
+  }
+  setTimeout(typeNext,300);
+  GT.paused=true;
+  toast('[通讯终端] '+ag.name+' 请求连线','blue',4000);
+}
+function renderOpts(tid,evt,ag){
+  const row=document.getElementById(tid+'-opts');
+  if(!row)return;
+  row.style.visibility='visible';
+  const lbl=document.getElementById(tid+'-cmd-label');
+  if(lbl)lbl.style.visibility='visible';
+  row.innerHTML='';
+  evt.options.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='sct-opt'+(opt.type==='warn'?' warn':'');
+    btn.textContent=opt.text;
+    btn.onclick=()=>selectOpt(tid,evt,opt,ag);
+    row.appendChild(btn);
+  });
+}
+function selectOpt(tid,evt,opt,ag){
+  const row=document.getElementById(tid+'-opts');
+  if(row){row.querySelectorAll('.sct-opt').forEach(b=>b.disabled=true);
+    row.innerHTML='<span style="color:var(--text-dim);font-size:10px;font-style:italic">指令已发送，等待确认...</span>';}
+  const badge=document.getElementById(tid+'-badge');
+  if(badge){badge.textContent='PROCESSING';badge.className='sct-status warn';}
+  setTimeout(()=>{
+    addCallLog(ag.logId||'log-av',GT.fmt(),evt.agCode,opt.reply,'agent');
+    addCallLog(ag.logId||'log-av',GT.fmt(),'OPS',opt.text,'ops');
+    updateCCLast(evt.agCode,opt.reply);
+    toast(evt.agCode+'：'+opt.reply.slice(0,28)+'…','info',4000);
+    const textEl=document.getElementById(tid+'-text');
+    if(textEl)textEl.textContent+='\n\n——\n'+opt.reply;
+    const cmd=document.getElementById(tid+'-cmd');
+    if(cmd)cmd.innerHTML='<div class="sct-cmd-label" style="color:var(--green)">RESPONSE ACKNOWLEDGED ────────────</div>';
+    const ts=document.getElementById(tid+'-ts');
+    if(ts)ts.textContent='[ '+GT.fmt()+' ]  LINK CLOSED';
+    if(badge){badge.textContent='CLOSED';badge.className='sct-status idle';}
+    GT.paused=false;
+    delete termMap[evt.id];
+    if(callQueue.length>0){const next=callQueue.shift();setTimeout(()=>openTerminal(next),1500);}
+  },1200);
+}
+function minimizeTerminal(tid){
+  const win=document.getElementById(tid);if(!win)return;
+  win.style.display='none';
+  const dock=document.getElementById('terminal-dock');
+  const mini=document.createElement('div');
+  const isWarn=win.classList.contains('warn-terminal');
+  mini.className='sct-mini'+(isWarn?' warn':'');
+  mini.id='mini-'+tid;
+  const nameEl=win.querySelector('.sct-name');
+  const avEl=win.querySelector('.sct-av');
+  const label=(avEl?avEl.textContent:'?')+' '+((nameEl?nameEl.textContent:'')).split(' ')[0];
+  mini.innerHTML=`<div class="sct-mini-dot"></div><span>${label}</span>`;
+  mini.onclick=()=>restoreTerminal(tid);
+  dock.appendChild(mini);
+}
+function restoreTerminal(tid){
+  const win=document.getElementById(tid);if(!win)return;
+  win.style.display='flex';bringTermFront(win);
+  const mini=document.getElementById('mini-'+tid);if(mini)mini.remove();
+}
+function closeTerminal(tid){
+  const win=document.getElementById(tid);if(win)win.remove();
+  const mini=document.getElementById('mini-'+tid);if(mini)mini.remove();
+  Object.keys(termMap).forEach(k=>{if(termMap[k]&&termMap[k].id===tid)delete termMap[k];});
+  if(Object.keys(termMap).length===0&&callQueue.length===0)GT.paused=false;
+}
+function bringTermFront(win){
+  document.querySelectorAll('.sct').forEach(w=>{if(w.style.zIndex>2999)w.style.zIndex=3000;});
+  win.style.zIndex=3100;
+}
+function addCallLog(logId,time,spk,msg,type){
+  const log=document.getElementById(logId);if(!log)return;
+  const row=document.createElement('div');
+  row.className='cl-row';
+  row.innerHTML=`<span class="cl-t">${time}</span><span class="cl-spk${type==='ops'?' ops':''}">${spk}:</span><span class="cl-msg">${msg.slice(0,60)}${msg.length>60?'…':''}</span>`;
+  log.appendChild(row);log.scrollTop=log.scrollHeight;
+}
+function updateCCLast(agCode,msg){
+  document.querySelectorAll('.cc').forEach(cc=>{
+    const av=cc.querySelector('.cc-av');
+    if(av&&av.textContent.trim()===agCode){
+      const last=cc.querySelector('.cc-last');
+      if(last)last.textContent='"'+msg.slice(0,40)+(msg.length>40?'…':'')+'"';
+    }
+  });
+}
+function requestStatus(agCode,agName){
+  const del=30+Math.floor(Math.random()*60);
+  const t=GT.day*1440+GT.hour*60+GT.min+del;
+  const tD=Math.floor(t/1440),tH=Math.floor((t%1440)/60),tM=t%60;
+  GT.scheduleAt({atDay:tD,atHour:tH,atMin:tM},()=>{
+    queueCall({
+      id:'status-'+agCode+'-'+Date.now(),agCode,
+      report:agCode==='AV'?'接线员，应你请求，我来回报。\n\n目前现场暂无新进展，一切尚在掌控中。'
+            :agCode==='LZ'?'……我在。\n\n没有新情况。':'福斯回报。目前无变化。',
+      options:[
+        {text:'已收到，继续保持',reply:'明白。',type:'normal'},
+        {text:'需要支援吗？',reply:'暂时不需要，我会联系你。',type:'normal'}
+      ]
+    });
+  });
+  toast('已向 '+agName+' 发送状态请求，预计 '+del+' 分钟后回报','info',4000);
+}
+let termDragState=null;
+function termDrag(e,tid){
+  const win=document.getElementById(tid);if(!win)return;
+  bringTermFront(win);
+  const z=parseFloat(document.body.style.zoom)||1;
+  termDragState={win,ox:e.clientX/z-parseFloat(win.style.left),oy:e.clientY/z-parseFloat(win.style.top)};
+  e.preventDefault();
+}
+document.addEventListener('mousemove',e=>{
+  if(!termDragState)return;
+  const z=parseFloat(document.body.style.zoom)||1;
+  termDragState.win.style.left=(e.clientX/z-termDragState.ox)+'px';
+  termDragState.win.style.top=(e.clientY/z-termDragState.oy)+'px';
+});
+document.addEventListener('mouseup',()=>{termDragState=null;});
+CALL_EVENTS.forEach(evt=>{
+  const t=evt.triggerMin;
+  const tD=Math.floor(t/1440),tH=Math.floor((t%1440)/60),tM=t%60;
+  GT.scheduleAt({atDay:tD,atHour:tH,atMin:tM},()=>queueCall(evt));
+});
+
+// ============================================================
+// 字体缩放
+// ============================================================
+function applyZoom(v){
+  v=parseFloat(v);document.body.style.zoom=v;
+  const d=document.getElementById('zoom-display');if(d)d.textContent=Math.round(v*100)+'%';
+  const r=document.getElementById('zoom-range');if(r)r.value=v;
+}
+
+// ============================================================
+// 面板折叠
+// ============================================================
+function togglePanel(btn){
+  const body=btn.closest('.panel').querySelector('.panel-body');
+  body.classList.toggle('collapsed');
+  btn.textContent=body.classList.contains('collapsed')?'▶':'▼';
+}
+function toggleInbox(){
+  const b=document.getElementById('inbox-body');
+  b.classList.toggle('collapsed');
+  document.getElementById('inbox-tog').textContent=b.classList.contains('collapsed')?'▶':'▼';
+}
+
+// ============================================================
+// 事件系统
+// ============================================================
+const EV_NODE_MAP={'ev-031':'n-e031','ev-029':'n-e029','ev-027':'n-e027','ev-026':'n-e026'};
+(function initEvIds(){
+  const ids=['ev-031','ev-029','ev-027','ev-026','ev-x17'];
+  document.querySelectorAll('.ev').forEach((el,i)=>{if(ids[i])el.dataset.evid=ids[i];});
+})();
+let selectedEvNode=null;
+function selEv(el){
+  document.querySelectorAll('.ev').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  if(selectedEvNode)selectedEvNode.style.outline='';
+  const nid=EV_NODE_MAP[el.dataset.evid];
+  if(nid){const n=document.getElementById(nid);
+    if(n){n.style.outline='2px solid var(--green)';selectedEvNode=n;
+      setTimeout(()=>{if(n.style.outline)n.style.outline='';},2000);}}
+}
+
+// 新建事件 [+] 按钮
+document.querySelector('.ev-add').addEventListener('click',()=>{
+  const name=prompt('输入新事件名称：');
+  if(!name||!name.trim())return;
+  const list=document.getElementById('event-list');
+  const card=document.createElement('div');
+  card.className='ev';card.onclick=()=>selEv(card);
+  const nodeId=spawnEventNode(name.trim(),null);
+  card.dataset.nodeId=nodeId||'';
+  card.innerHTML=`<div class="ev-row1"><span class="evb unk">?</span><span class="ev-name">${name.trim()}</span><button class="ev-resolve" title="结案" onclick="event.stopPropagation();resolveEvent(this.closest('.ev'),this.closest('.ev').dataset.nodeId)">✓</button></div><div class="ev-row2"><span class="ev-ag">— 未分配</span><span>新报告</span><span class="ev-t">D+${GT.day}</span></div>`;
+  list.insertBefore(card,list.querySelector('.ev-add'));
+  addFileToArchive('新事件: '+name.trim()+' 初始记录','draft');
+  toast('事件已记录并标注到地图：'+name.trim(),'info');
+});
+
+// ============================================================
+// 通讯卡
+// ============================================================
+function cycleCC(row){
+  const cc=row.closest('.cc');
+  const prev=cc.querySelector('.cc-preview');
+  const det=cc.querySelector('.cc-detail');
+  if(!prev)return;
+  const pO=prev.classList.contains('open');
+  const dO=det&&det.classList.contains('open');
+  if(!pO&&!dO){prev.classList.add('open');}
+  else if(pO&&!dO){if(det){prev.classList.remove('open');det.classList.add('open');}else prev.classList.remove('open');}
+  else if(dO){det.classList.remove('open');}
+}
+function openDetail(btn){
+  const cc=btn.closest('.cc');
+  const prev=cc.querySelector('.cc-preview');
+  const det=cc.querySelector('.cc-detail');
+  if(det){prev&&prev.classList.remove('open');det.classList.add('open');}
+}
+
+// ============================================================
+// 收件箱
+// ============================================================
+function inboxAccept(btn){
+  const item=btn.closest('.inbox-item');
+  const title=item.querySelector('.ii-text').textContent;
+  const src=item.querySelector('.ii-src').textContent;
+  const scroll=document.getElementById('comm-scroll');
+  const card=document.createElement('div');
+  card.className='cc';card.style.borderColor='var(--green-dim)';
+  card.innerHTML=`
+    <div class="cc-row" onclick="cycleCC(this)">
+      <div class="cc-av online">?</div>
+      <div class="cc-name">${title.slice(0,20)}</div>
+      <div class="cc-stat online">● 接入</div>
+      <button class="cc-tog" onclick="event.stopPropagation();cycleCC(this.closest('.cc').querySelector('.cc-row'))">▼</button>
+    </div>
+    <div class="cc-preview open">
+      <div class="cc-last">"${src}"</div>
+      <div class="cc-acts">
+        <button class="bs w">申请支援</button>
+        <button class="bs b" onclick="openTransfer('未知来源','新事件')">转接</button>
+      </div>
+    </div>`;
+  scroll.insertBefore(card,scroll.firstChild);
+  item.remove();
+  toast('已接入：'+title.slice(0,18)+'…','info');
+  const remaining=document.querySelectorAll('.inbox-item').length;
+  const cnt=document.querySelector('#inbox-header span[style*="amber"]');
+  if(cnt)cnt.textContent=remaining;
+}
+function inboxIgnore(btn){
+  const item=btn.closest('.inbox-item');
+  item.style.transition='opacity .3s';item.style.opacity='0';
+  setTimeout(()=>item.remove(),300);
+  toast('已忽略','warn');
+}
+
+// 绑定收件箱按钮
+document.querySelectorAll('.inbox-item').forEach(item=>{
+  const btns=item.querySelectorAll('.ii-btn');
+  if(btns[0])btns[0].onclick=()=>inboxAccept(btns[0]);
+  if(btns[1])btns[1].onclick=()=>inboxIgnore(btns[1]);
+});
+
+// ============================================================
+// 档案库
+// ============================================================
+const STATUS_MAP={
+  '提交':{cls:'pend',txt:'待审批'},
+  '标记':{cls:'flag',txt:'已标记'},
+  '归档':{cls:'filed',txt:'已归档'}
+};
+function archAct(action){
+  const sel=document.querySelector('.fr.sel');
+  if(!sel){toast('请先选择文件','warn');return;}
+  const fname=sel.querySelector('.fn')?.textContent||'';
+  if(action==='移动'){
+    const parts=['全部文件','待处理','已归档','已转接','已标记'];
+    const choice=prompt('移动到分区：\n'+parts.map((p,i)=>`${i+1}. ${p}`).join('\n')+'\n\n输入数字(1-5)：');
+    const idx=parseInt(choice)-1;
+    if(idx>=0&&idx<parts.length)toast('已移动至: '+parts[idx],'info');
+    return;
+  }
+  const sm=STATUS_MAP[action];
+  if(!sm){toast('操作成功: '+action,'info');return;}
+  let badge=sel.querySelector('.fst');
+  if(!badge){badge=document.createElement('div');badge.className='fst';sel.appendChild(badge);}
+  badge.className='fst '+sm.cls;badge.textContent=sm.txt;
+  if(sm.cls==='flag')sel.style.borderLeft='3px solid var(--amber)';
+  if(sm.cls==='filed')sel.style.opacity='.6';
+  const fops=document.querySelector('.fops span');
+  if(fops)fops.textContent='已' + action + ' '+fname.slice(0,24);
+  toast(action+'成功: '+fname.slice(0,20),'info');
+}
+function selFR(el){
+  document.querySelectorAll('.fr').forEach(r=>r.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function swSI(el){document.querySelectorAll('.si').forEach(s=>s.classList.remove('act'));el.classList.add('act');}
+function swPT(el){document.querySelectorAll('.pt').forEach(t=>t.classList.remove('act'));el.classList.add('act');}
+
+// 档案库底部按钮绑定
+(function(){
+  const ops=document.querySelector('.atb');
+  if(!ops)return;
+  const btns=ops.querySelectorAll('.ab');
+  if(btns[0])btns[0].onclick=()=>archAct('提交');
+  if(btns[1])btns[1].onclick=()=>archAct('标记');
+  if(btns[2])btns[2].onclick=()=>archAct('移动');
+})();
+
+function addFileToArchive(name,status){
+  const list=document.querySelector('.flist');if(!list)return;
+  const row=document.createElement('div');
+  row.className='fr';row.onclick=()=>selFR(row);
+  const now=new Date();
+  const ds=String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const sm={draft:{cls:'draft',txt:'草稿'},pend:{cls:'pend',txt:'待审批'},filed:{cls:'filed',txt:'已归档'}};
+  const s=sm[status]||sm.draft;
+  row.innerHTML=`<div class="fi doc">📄</div><div class="fn">${name}</div><div class="fst ${s.cls}">${s.txt}</div><div class="fd">${ds}</div>`;
+  list.insertBefore(row,list.firstChild);
+  const fops=document.querySelector('.fops span');
+  if(fops)fops.textContent='新增: '+name.slice(0,30);
+}
+
+// ============================================================
+// 浮动窗口
+// ============================================================
+function openW(id){const w=document.getElementById(id);if(!w)return;w.classList.add('open');bringFront(w);}
+function closeW(id){const w=document.getElementById(id);if(w)w.classList.remove('open');}
+function bringFront(el){document.querySelectorAll('.fw').forEach(w=>w.style.zIndex=200);el.style.zIndex=300;}
+document.querySelectorAll('.fw').forEach(w=>w.addEventListener('mousedown',()=>bringFront(w)));
+let ds=null;
+function startDrag(e,id){
+  const el=document.getElementById(id);if(!el)return;
+  bringFront(el);
+  const r=el.getBoundingClientRect();
+  ds={el,ox:e.clientX-r.left,oy:e.clientY-r.top};e.preventDefault();
+}
+document.addEventListener('mousemove',e=>{
+  if(!ds)return;
+  let x=e.clientX-ds.ox,y=e.clientY-ds.oy;
+  x=Math.max(0,Math.min(window.innerWidth-ds.el.offsetWidth,x));
+  y=Math.max(0,Math.min(window.innerHeight-ds.el.offsetHeight,y));
+  ds.el.style.left=x+'px';ds.el.style.top=y+'px';
+});
+document.addEventListener('mouseup',()=>{ds=null;});
+
+// ============================================================
+// 部门转接
+// ============================================================
+function openTransfer(ag,ev){
+  const t=document.getElementById('xt-tgt');if(t)t.textContent=ev+' / '+ag;
+  openW('wt');
+}
+function deptCk(btn){
+  const n=btn.querySelector('.dn');
+  const tgt=document.getElementById('xt-tgt');
+  const dname=n?n.textContent:'未知部门';
+  const target=tgt?tgt.textContent:'未知目标';
+  const isSpecial=btn.closest('.dept-special')!==null;
+  if(isSpecial){
+    addFileToArchive('转接申请: '+dname+' / '+target,'pend');
+    toast('特殊转接申请已提交，等待审批','warn',4000);
+  } else {
+    addFileToArchive('转接确认: '+dname+' / '+target,'filed');
+    toast('已转接至：'+dname,'info',3000);
+  }
+  closeW('wt');
+}
+
+// ============================================================
+// 特遣队调度
+// ============================================================
+function swSTab(tab,pane){
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('act'));
+  document.querySelectorAll('.spane').forEach(p=>p.classList.remove('act'));
+  tab.classList.add('act');
+  const p=document.getElementById(pane);if(p)p.classList.add('act');
+}
+function submitSRT(){
+  const ta=document.querySelector('#sp2 .sta');
+  const evSel=document.querySelector('#sp2 .ssel');
+  if(!ta||!ta.value.trim()){toast('请填写行动说明','warn');return;}
+  const evName=evSel?evSel.options[evSel.selectedIndex].text:'未知事件';
+  const logPane=document.getElementById('sp3');
+  const now=new Date();
+  const ts='D+'+(GT.day)+' '+String(GT.hour).padStart(2,'0')+':'+String(GT.min).padStart(2,'0');
+  const row=document.createElement('div');
+  row.className='sl-row';
+  row.innerHTML=`<span class="sl-t">${ts}</span><span class="sl-m">调度申请提交: ${evName.slice(0,14)}</span><span class="sl-g pd">待批</span>`;
+  if(logPane)logPane.insertBefore(row,logPane.firstChild);
+  swSTab(document.querySelectorAll('.stab')[2],'sp3');
+  const alpha=document.querySelector('#sp1 .su:first-child .sbg');
+  if(alpha){alpha.className='sbg dp';alpha.textContent='审批中';}
+  addFileToArchive('特遣队调度申请: '+evName.slice(0,10),'pend');
+  ta.value='';
+  toast('调度申请已提交，等待上级批准','warn',4000);
+  setTimeout(()=>{
+    row.querySelector('.sl-g').className='sl-g dn';
+    row.querySelector('.sl-g').textContent='批准';
+    if(alpha){alpha.className='sbg dp';alpha.textContent='已部署';}
+    toast('调度申请已批准，特遣队出发','blue',4000);
+    addFileToArchive('特遣队接管确认: '+evName.slice(0,10),'filed');
+    // ε6 通报
+    const logPane2=document.getElementById('sp3');
+    const ts2='D+'+(GT.day)+' '+String(GT.hour).padStart(2,'0')+':'+String(GT.min).padStart(2,'0');
+    const row2=document.createElement('div');
+    row2.className='sl-row';
+    row2.innerHTML=`<span class="sl-t">${ts2}</span><span class="sl-m">ε6 请求通报 — 清查进行中</span><span class="sl-g ac">进行中</span>`;
+    if(logPane2)logPane2.insertBefore(row2,logPane2.firstChild);
+    swSTab(document.querySelectorAll('.stab')[2],'sp3');
+    toast('已收到 ε6 通报','blue');
+  },8000);
+}
+
+// ============================================================
+// 申请支援（底栏）→ 创建支援卡片
+// ============================================================
+const SUPPORT_TYPES=[
+  {name:'医疗待命',color:'#3a6a4a',textColor:'#6aee9a',eta:30+Math.floor(Math.random()*30)},
+  {name:'SRT待命',color:'var(--red-dim)',textColor:'var(--red)',eta:60+Math.floor(Math.random()*60)},
+  {name:'后勤补给',color:'var(--bg3)',textColor:'var(--text-dim)',eta:20+Math.floor(Math.random()*20)}
+];
+let supCount=0;
+document.querySelector('.ba.a')&&document.querySelectorAll('.ba.a').forEach((btn,bi)=>{
+  if(bi===0)btn.addEventListener('click',()=>{
+    const names=SUPPORT_TYPES.map((s,i)=>`${i+1}. ${s.name}`).join('\n');
+    const ch=prompt('选择支援类型：\n'+names+'\n\n输入数字(1-3)：');
+    const idx=parseInt(ch)-1;
+    if(idx<0||idx>=SUPPORT_TYPES.length)return;
+    const sup=SUPPORT_TYPES[idx];
+    supCount++;
+    const id='sup-'+supCount;
+    const mapInner=document.getElementById('map-inner');if(!mapInner)return;
+    const card=document.createElement('div');
+    card.className='sup-card';card.id=id;
+    card.style.cssText=`left:${200+supCount*30}px;top:${300+supCount*20}px;border-color:${sup.color};`;
+    let etaSec=sup.eta*60;
+    card.innerHTML=`<div class="sc-type" style="color:${sup.textColor}">◈ ${sup.name}</div><div class="sc-eta" id="${id}-eta">ETA ${String(Math.floor(etaSec/60)).padStart(2,'0')}:${String(etaSec%60).padStart(2,'0')}</div><div class="sc-status">前往目标区域</div>`;
+    mapInner.appendChild(card);
+    card.addEventListener('mousedown',e=>{e.stopPropagation();sd={el:card,sx:e.clientX,sy:e.clientY,ox:parseFloat(card.style.left),oy:parseFloat(card.style.top)};});
+    const iv=setInterval(()=>{
+      etaSec-=GT.speed;
+      if(etaSec<=0){
+        const etaEl=document.getElementById(id+'-eta');
+        if(etaEl){etaEl.textContent='已抵达';etaEl.style.color='var(--green)';}
+        clearInterval(iv);return;
+      }
+      const etaEl=document.getElementById(id+'-eta');
+      if(etaEl){const m=String(Math.floor(etaSec/60)).padStart(2,'0'),s=String(etaSec%60).padStart(2,'0');etaEl.textContent='ETA '+m+':'+s;}
+      requestAnimationFrame(drawLinks);
+    },1000);
+    drawLinks();
+    toast('支援申请已发出：'+sup.name,'info',3000);
+  });
+});
+
+// ============================================================
+// 地图系统
+// ============================================================
+let ms=0.4,mx=0,my=0;
+const inner=document.getElementById('map-inner');
+const canvas=document.getElementById('map-canvas');
+const svg=document.getElementById('map-svg');
+let LINKS=[
+  ['n-av','n-e031','#ff4a4a',.5],
+  ['n-lz','n-e029','#ffb84a',.4],
+  ['n-rf','n-e026','#ffb84a',.3],
+  ['n-x17','n-e027','#4ab8ff',.3]
+];
+
+// ---- 事件节点计数器 ----
+let evNodeSeq=100;
+
+// ---- 新建地图节点并可选连线到调查员 ----
+function spawnEventNode(evName,agNodeId){
+  const canvas=document.getElementById('map-inner');
+  if(!canvas)return null;
+  const id='n-ev-'+evNodeSeq++;
+  // 在当前视口内随机空位
+  const px=Math.round(100+Math.random()*600);
+  const py=Math.round(100+Math.random()*400);
+  const nd=document.createElement('div');
+  nd.className='node node-ev';nd.id=id;
+  nd.style.left=px+'px';nd.style.top=py+'px';
+  nd.innerHTML=`<div class="nb"></div><div class="n-name">${evName}</div><div class="n-name" style="color:var(--amber-dim)">新报告</div>`;
+  canvas.appendChild(nd);
+  // 绑定拖拽
+  nd.addEventListener('mousedown',e=>{
+    e.stopPropagation();
+    nd._ds={sx:e.clientX,sy:e.clientY,ox:parseFloat(nd.style.left),oy:parseFloat(nd.style.top)};
+    nd._dragging=true;
+  });
+  // 连线到调查员节点（如果有）
+  const agMap={'AV':'n-av','LZ':'n-lz','RF':'n-rf'};
+  const agId=agNodeId||(agMap[Object.keys(agMap).find(k=>evName.includes(k))]);
+  if(agId&&document.getElementById(agId)){
+    LINKS.push([agId,id,'#ffb84a',.35]);
+  }
+  requestAnimationFrame(drawLinks);
+  return id;
+}
+
+// ---- 结案：移除事件节点 + 断连线 ----
+function resolveEvent(evCard,nodeId){
+  // 事件列表卡片变灰
+  evCard.style.opacity='.35';
+  evCard.style.pointerEvents='none';
+  evCard.style.textDecoration='line-through';
+  const badge=evCard.querySelector('.evb');
+  if(badge){badge.style.borderColor='var(--border)';badge.style.color='var(--text-dim)';}
+  const tag=document.createElement('span');
+  tag.style.cssText='font-size:9px;color:var(--green);margin-left:auto';
+  tag.textContent='✓ 结案';
+  const row1=evCard.querySelector('.ev-row1');
+  if(row1)row1.appendChild(tag);
+  // 移除地图节点（淡出）
+  if(nodeId){
+    const nd=document.getElementById(nodeId);
+    if(nd){
+      nd.style.transition='opacity .6s';nd.style.opacity='0';
+      setTimeout(()=>nd.remove(),650);
+    }
+    // 断开所有涉及该节点的连线
+    LINKS=LINKS.filter(([a,b])=>a!==nodeId&&b!==nodeId);
+    requestAnimationFrame(drawLinks);
+  }
+  toast('事件已结案','info');
+  // 延迟移除卡片
+  setTimeout(()=>{evCard.style.transition='max-height .5s,opacity .5s';evCard.style.maxHeight='0';evCard.style.overflow='hidden';},1200);
+  setTimeout(()=>evCard.remove(),1800);
+}
+function nodeCenter(id){
+  const el=document.getElementById(id);
+  if(!el)return{x:0,y:0};
+  const rx=parseFloat(el.style.left)+el.offsetWidth/2;
+  const ry=parseFloat(el.style.top)+el.offsetHeight/2;
+  return{x:rx*ms+mx, y:ry*ms+my};
+}
+function drawLinks(){
+  if(!svg)return;
+  svg.innerHTML='';
+  LINKS.forEach(([a,b,col,op])=>{
+    const ca=nodeCenter(a),cb=nodeCenter(b);
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',ca.x);l.setAttribute('y1',ca.y);
+    l.setAttribute('x2',cb.x);l.setAttribute('y2',cb.y);
+    l.setAttribute('stroke',col);l.setAttribute('stroke-width','1');
+    l.setAttribute('stroke-dasharray','5,3');l.setAttribute('opacity',op);
+    svg.appendChild(l);
+  });
+  // 支援卡片连线到最近事件节点
+  document.querySelectorAll('.sup-card').forEach(sc=>{
+    const scx=(parseFloat(sc.style.left)+sc.offsetWidth/2)*ms+mx;
+    const scy=(parseFloat(sc.style.top)+sc.offsetHeight/2)*ms+my;
+    let minDist=Infinity,nearId=null;
+    ['n-e031','n-e029','n-e027','n-e026'].forEach(nid=>{
+      const c=nodeCenter(nid);
+      const d=Math.hypot(c.x-scx,c.y-scy);
+      if(d<minDist){minDist=d;nearId=nid;}
+    });
+    if(!nearId||minDist>500)return;
+    const ec=nodeCenter(nearId);
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',scx);l.setAttribute('y1',scy);
+    l.setAttribute('x2',ec.x);l.setAttribute('y2',ec.y);
+    l.setAttribute('stroke','#6aee9a');l.setAttribute('stroke-width','1.5');
+    l.setAttribute('stroke-dasharray','3,2');l.setAttribute('opacity','.5');
+    svg.appendChild(l);
+  });
+}
+setTimeout(drawLinks,150);
+function applyMap(){
+  if(!inner)return;
+  inner.style.transform=`translate(${mx}px,${my}px) scale(${ms})`;
+  const zl=document.getElementById('zoom-lbl');if(zl)zl.textContent=Math.round(ms*100)+'%';
+  requestAnimationFrame(drawLinks);
+}
+function mzoom(f){
+  if(!canvas)return;
+  const r=canvas.getBoundingClientRect();
+  const cx=r.width/2,cy=r.height/2;
+  mx=cx+(mx-cx)*f;my=cy+(my-cy)*f;
+  ms=Math.min(3,Math.max(.15,ms*f));applyMap();
+}
+function mreset(){ms=.4;mx=0;my=0;applyMap();}
+if(canvas){
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const r=canvas.getBoundingClientRect();
+    const px=e.clientX-r.left,py=e.clientY-r.top;
+    const f=e.deltaY<0?1.15:1/1.15;
+    mx=px+(mx-px)*f;my=py+(my-py)*f;
+    ms=Math.min(3,Math.max(.15,ms*f));applyMap();
+  },{passive:false});
+  let ps=null;
+  canvas.addEventListener('mousedown',e=>{
+    if(e.target.closest('.node')||e.target.closest('.sup-card')||e.target.closest('.map-ctrl')||e.target.closest('.map-legend'))return;
+    ps={sx:e.clientX-mx,sy:e.clientY-my};canvas.classList.add('panning');
+  });
+  document.addEventListener('mousemove',e=>{if(!ps)return;mx=e.clientX-ps.sx;my=e.clientY-ps.sy;applyMap();});
+  document.addEventListener('mouseup',()=>{ps=null;canvas.classList.remove('panning');});
+}
+// 节点拖动
+let nd=null,sd=null;
+document.querySelectorAll('.node').forEach(n=>{
+  n.addEventListener('mousedown',e=>{
+    e.stopPropagation();
+    nd={el:n,sx:e.clientX,sy:e.clientY,ox:parseFloat(n.style.left),oy:parseFloat(n.style.top)};
+  });
+});
+document.querySelectorAll('.sup-card').forEach(c=>{
+  c.addEventListener('mousedown',e=>{
+    e.stopPropagation();
+    sd={el:c,sx:e.clientX,sy:e.clientY,ox:parseFloat(c.style.left),oy:parseFloat(c.style.top)};
+  });
+});
+document.addEventListener('mousemove',e=>{
+  if(nd){const dx=(e.clientX-nd.sx)/ms,dy=(e.clientY-nd.sy)/ms;nd.el.style.left=(nd.ox+dx)+'px';nd.el.style.top=(nd.oy+dy)+'px';requestAnimationFrame(drawLinks);}
+  if(sd){const dx=(e.clientX-sd.sx)/ms,dy=(e.clientY-sd.sy)/ms;sd.el.style.left=(sd.ox+dx)+'px';sd.el.style.top=(sd.oy+dy)+'px';requestAnimationFrame(drawLinks);}
+});
+document.addEventListener('mouseup',()=>{nd=null;sd=null;});
+mreset();
+
+</script>
+</body>
+</html>
