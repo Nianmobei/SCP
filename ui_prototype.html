@@ -83,6 +83,9 @@ body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;
 .n-pulse{position:absolute;width:100%;height:100%;border:1px solid var(--green);animation:pulse 1.5s ease-in-out infinite;opacity:.3;}
 .sup-card{position:absolute;z-index:6;background:var(--bg2);border:1px solid #3a6a4a;min-width:120px;padding:5px 7px;font-size:10px;cursor:move;user-select:none;}
 .sc-type{font-size:9px;letter-spacing:1px;margin-bottom:3px;}
+.intel-tag{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(10,20,50,.9);border:1px solid var(--blue);color:var(--blue);font-size:9px;padding:1px 5px;white-space:nowrap;z-index:8;pointer-events:none;letter-spacing:.5px;}
+.node-ag .nb,.node-ev .nb,.node-xfer .nb{cursor:pointer;}
+.node:hover>.nb{filter:brightness(1.2);}
 .sc-eta{font-size:11px;font-weight:bold;color:var(--amber);}
 .sc-status{font-size:9px;color:var(--text-dim);margin-top:2px;}
 .map-ctrl{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:2px;z-index:10;}
@@ -303,9 +306,9 @@ input[type=range]{flex:1;accent-color:var(--green);}
 .sup-drag.intel{border-color:#3a2a5a;color:#d08aff;}
 .sup-drag.snap{border-color:var(--green);background:var(--green-dim);}
 /* 沉默/失联图标（调查员节点旁） */
-.silence-icon{position:absolute;top:-8px;right:-8px;font-size:9px;padding:0 2px;background:var(--bg2);border:1px solid;z-index:5;}
-.silence-icon.warn{color:var(--amber);border-color:var(--amber-dim);}
-.silence-icon.crit{color:var(--red);border-color:var(--red-dim);animation:blink 1s infinite;}
+.silence-icon{position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;border:1px solid;z-index:5;pointer-events:none;}
+.silence-icon.warn{background:var(--amber);border-color:var(--amber);box-shadow:0 0 4px var(--amber);}
+.silence-icon.crit{background:var(--red);border-color:var(--red);box-shadow:0 0 5px var(--red);animation:blink 1s infinite;}
 /* ---- 来电流水线 ---- */
 .cf-hd{display:flex;align-items:center;padding:4px 8px;gap:6px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .cf-hd-title{font-size:9px;letter-spacing:1.5px;color:var(--text-dim);flex:1;}
@@ -403,15 +406,7 @@ input[type=range]{flex:1;accent-color:var(--green);}
     <div id="map-canvas">
       <svg id="map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div id="map-inner">
-        <div class="node node-ag" id="n-av" style="left:680px;top:300px"><div class="nb">AV<div class="n-pulse"></div></div><div class="n-name">艾娃 #002</div><div class="n-name" style="color:var(--green-dim)">ZONE-B</div></div>
-        <div class="node node-ag" id="n-lz" style="left:400px;top:480px"><div class="nb">LZ</div><div class="n-name">林照野 #001</div><div class="n-name" style="color:var(--grey)">○ 沉默</div></div>
-        <div class="node node-ag lv1" id="n-rf" style="left:300px;top:350px"><div class="nb">RF</div><div class="n-name">福斯 #003</div><div class="n-name" style="color:var(--amber)">待接异常</div></div>
-        <div class="node node-ag lv1" id="n-zl" style="left:500px;top:560px"><div class="nb">ZL</div><div class="n-name">周磊 #004</div><div class="n-name" style="color:var(--text-dim)">待命</div></div>
-        <div class="node node-ev node-ev-hi" id="n-e031" style="left:820px;top:290px"><div class="nb"></div><div class="n-name">第十一封信</div><div class="n-name" style="color:var(--red-dim)">EVT-031</div></div>
-        <div class="node node-ev" id="n-e029" style="left:430px;top:600px"><div class="nb"></div><div class="n-name">值班室的人</div><div class="n-name" style="color:var(--amber-dim)">EVT-029</div></div>
-        <div class="node node-ev" id="n-e027" style="left:520px;top:420px"><div class="nb"></div><div class="n-name">X-17异响</div><div class="n-name" style="color:var(--blue-dim)">EVT-027</div></div>
-        <div class="node node-ev" id="n-e026" style="left:200px;top:350px"><div class="nb"></div><div class="n-name">7号仓库气味</div><div class="n-name" style="color:var(--amber-dim)">EVT-026</div></div>
-        <div class="node node-xfer" id="n-x17" style="left:640px;top:450px"><div class="nb">ε6<div class="n-pulse"></div></div><div class="n-name">X-17接管</div></div>
+        <!-- 地图节点由 JS spawnMapNodes() 从 events_data.js MAP_NODES 生成 -->
         <div class="sup-card" id="sc-med" style="left:870px;top:490px"><div class="sc-type">◈ 医疗待命</div><div class="sc-eta" id="sc-eta">ETA 00:42</div><div class="sc-status">前往 第十一封信</div></div>
       </div>
       <div class="map-ctrl"><button class="mbt" onclick="mzoom(1.2)">+</button><button class="mbt" onclick="mzoom(1/1.2)">−</button><button class="mbt" onclick="mreset()">⊙</button></div>
@@ -707,6 +702,7 @@ input[type=range]{flex:1;accent-color:var(--green);}
     </div>
   </div>
 </div>
+<script src="events_data.js"></script>
 <script>
 
 // ============================================================
@@ -788,13 +784,7 @@ function bulletin(title, msg, type='warn', dur=6000){
   setTimeout(()=>{ b.style.transition='opacity .4s'; b.style.opacity='0'; setTimeout(()=>b.remove(),400); }, dur);
 }
 
-// ---- 沉默超时检测 ----
-const INVESTIGATOR_SILENCE = {
-  'AV': { lastContact: 7*1440+3*60+26, warnThresh:120, critThresh:240, warned:false, crited:false },
-  'LZ': { lastContact: 1*1440+9*60+40, warnThresh:120, critThresh:240, warned:false, crited:false },
-  'RF': { lastContact: 5*1440+17*60+50, warnThresh:180, critThresh:360, warned:false, crited:false },
-  'ZL': { lastContact: 6*1440+0*60+0,  warnThresh:180, critThresh:360, warned:false, crited:false }
-};
+// ---- 沉默超时检测（数据在 events_data.js: INVESTIGATOR_SILENCE）----
 const AG_CC_ID = {'AV':'log-av','LZ':'log-lz','RF':'log-rf','ZL':'log-zl'};
 const AG_NAME  = {'AV':'艾娃 #002','LZ':'林照野 #001','RF':'福斯 #003','ZL':'周磊 #004'};
 const AG_NODE  = {'AV':'n-av','LZ':'n-lz','RF':'n-rf','ZL':'n-zl'};
@@ -837,11 +827,7 @@ function checkSilence(){
   });
 }
 
-// ---- 事件自动升级 ----
-const EVENT_ESCALATION = {
-  'n-e029': { name:'值班室的人', level:0, lastEsc: 1*1440, interval:240, maxLevel:3 },
-  'n-e026': { name:'7号仓库气味', level:1, lastEsc: 5*1440+17*60, interval:300, maxLevel:3 }
-};
+// ---- 事件自动升级（数据在 events_data.js: EVENT_ESCALATION）----
 const EVB_CLASS = ['unk','l1','l2','l3'];
 const EVB_TEXT  = ['?','I','II','III'];
 
@@ -913,43 +899,10 @@ document.addEventListener('keyup', e=>{
 });
 
 // ============================================================
-// 通讯终端系统
+// 通讯终端系统（AGENTS / CALL_EVENTS 已移至 events_data.js）
 // ============================================================
-const AGENTS={
-  'AV':{name:'艾娃·塞利克 #002',zone:'ZONE-B · 第十一封信',cls:'online',logId:'log-av'},
-  'LZ':{name:'林照野 #001',zone:'ZONE-D · 值班室的人',cls:'silent',logId:'log-lz'},
-  'RF':{name:'福斯 #003',zone:'ZONE-C · 7号仓库',cls:'warn',logId:'log-rf'}
-};
-const CALL_EVENTS=[
-  {id:'call-av-1',agCode:'AV',triggerMin:7*1440+8*60+15,
-   report:'接线员，这里是艾娃。\n\n第12封信今早出现了。收件人是同一栋楼的三户居民，邮戳显示的寄件地址不存在。\n\n信件内容经初步判读，存在重复短语结构，我怀疑是低阶模因载体。\n\n目前三名接触者均表现正常，但我需要指示——是否申请认知评估小组介入？',
-   options:[
-     {text:'批准申请认知评估小组',reply:'收到，我这就联系评估小组。保持观察，不要让接触者离开视线范围。',type:'normal'},
-     {text:'继续观察，暂缓申请',reply:'明白。我会持续监控，24小时内再次回报。',type:'normal'},
-     {text:'要求提交信件样本后再决定',reply:'了解。我会妥善封存一份样本，通过标准渠道送检，预计明天能有结果。',type:'warn'}
-   ]},
-  {id:'call-av-2',agCode:'AV',triggerMin:7*1440+11*60+0,
-   report:'接线员，紧急回报。\n\n第13封信到了。这次收件人包括我的线人——他刚才打电话给我，声音有些不对劲。\n\n我需要支援。',
-   options:[
-     {text:'立即申请医疗支援待命',reply:'收到。请确认你当前的坐标，支援预计40分钟后抵达。',type:'warn'},
-     {text:'让线人远离现场，你继续监控',reply:'明白，我来处理。如果有变化立刻联系你。',type:'normal'},
-     {text:'请求状态报告，等待更多信息',reply:'……好。我再观察一小时。',type:'normal'}
-   ]},
-  {id:'call-lz-1',agCode:'LZ',triggerMin:7*1440+14*60+30,
-   report:'……接线员。\n\n（沉默3秒）\n\n我在值班室找到了什么。\n\n你们说那个人失踪了——但失踪记录是伪造的。档案里有他的签名，日期是他"失踪"后第三天。\n\n我需要确认：基金会内部是否有人知道这件事？',
-   options:[
-     {text:'告知正在核查，让他先撤离现场',reply:'（沉默）……好。',type:'warn'},
-     {text:'要求他继续收集证据',reply:'明白。',type:'normal'},
-     {text:'上报内部异常，申请核查',reply:'……谢谢告知。',type:'normal'}
-   ]},
-  {id:'call-rf-1',agCode:'RF',triggerMin:7*1440+16*60+0,
-   report:'接线员，福斯报告。\n\n7号仓库情况已稳定，气味来源确认是腐坏的有机化肥，无异常。\n\n建议关闭本次调查，移交市政部门处理。',
-   options:[
-     {text:'批准关闭，移交市政',reply:'收到，感谢配合。我来办理档案归档。',type:'normal'},
-     {text:'要求进一步检查后再关闭',reply:'……明白。我再查一遍。',type:'warn'},
-     {text:'批准关闭，但保留监控标记',reply:'了解，我已记录。',type:'normal'}
-   ]}
-];
+const AGENTS_EXTRA={};  // 如需运行时动态注册调查员，push到此后合并
+Object.assign(AGENTS, AGENTS_EXTRA);
 
 const callQueue=[];
 let termCount=0;
@@ -1122,11 +1075,7 @@ document.addEventListener('mousemove',e=>{
   termDragState.win.style.top=(e.clientY/z-termDragState.oy)+'px';
 });
 document.addEventListener('mouseup',()=>{termDragState=null;});
-CALL_EVENTS.forEach(evt=>{
-  const t=evt.triggerMin;
-  const tD=Math.floor(t/1440),tH=Math.floor((t%1440)/60),tM=t%60;
-  GT.scheduleAt({atDay:tD,atHour:tH,atMin:tM},()=>queueCall(evt));
-});
+// CALL_EVENTS 注册已移至文件底部 spawnMapNodes() 之后
 
 // ============================================================
 // 字体缩放
@@ -1267,54 +1216,83 @@ function cfAccept(id){
   const isSuspected = item.classList.contains('suspected');
   item.classList.add('accepted');
   updateCFCount();
+
+  // ---- 优先使用 data-agent；否则从来源提取调查员代号（取空格前第一词） ----
+  const agentKey = item.dataset.agent || srcFull.split(/[\s\/]/)[0].trim().slice(0,12);
+
+  // ---- 如果是 CALL_EVENTS 调查员来电 → 打开通讯终端 ----
+  const agCode = Object.keys(AGENTS).find(k=>item.dataset.agent===k || srcFull.startsWith(AGENTS[k]?.name?.slice(0,4)));
+  const pendingCall = CALL_EVENTS.find(ev=>ev.agCode===agCode && !termMap[ev.id] && ev.id.includes('call'));
+  if(agCode && pendingCall){
+    // 确保 AGENTS 里有这个调查员
+    if(AGENTS[agCode]){
+      queueCall(pendingCall);
+      return;
+    }
+  }
+
   const scroll = document.getElementById('comm-scroll');
-  // ---- 查重：提取调查员代号，查是否已有同源卡片 ----
-  // cf-item 上的 data-agent 属性（HTML里定义或addCommFeed时设置）
-  const agentKey = item.dataset.agent || srcFull.slice(0,20);
+  // ---- 查重：同 agentKey 是否已有卡片 ----
   const existing = scroll.querySelector(`.cc[data-agent="${CSS.escape(agentKey)}"]`);
   if(existing){
-    // 已有该调查员的卡片 → 追加消息到日志
+    // 追加消息
     let log = existing.querySelector('.cc-log');
     if(!log){
-      // 没有cc-log时，追加到cc-last
       const last = existing.querySelector('.cc-last');
-      if(last) last.textContent = '"'+preview+'"';
+      if(last){
+        log = document.createElement('div');
+        log.className = 'cc-log';
+        last.replaceWith(log);
+        const firstRow = document.createElement('div');
+        firstRow.className='cl-row';
+        firstRow.innerHTML=`<span class="cl-t">${GT.fmt()}</span><span class="cl-msg">${preview}</span>`;
+        log.appendChild(firstRow);
+      }
     } else {
       const row = document.createElement('div');
       row.className='cl-row';
-      row.innerHTML=`<span class="cl-t">${GT.fmt()}</span><span class="cl-spk">${agentKey.slice(0,4)}:</span><span class="cl-msg">${preview}</span>`;
+      row.innerHTML=`<span class="cl-t">${GT.fmt()}</span><span class="cl-msg">${preview}</span>`;
       log.appendChild(row);
-      log.scrollTop=log.scrollHeight;
+      log.scrollTop = log.scrollHeight;
     }
-    // 确保预览展开
     const prev = existing.querySelector('.cc-preview');
     if(prev) prev.classList.add('open');
-    toast('新消息追加：'+srcFull.slice(0,16), 'info');
+    // 闪一下边框提示有新消息
+    existing.style.borderLeftColor='var(--green)';
+    setTimeout(()=>{ existing.style.borderLeftColor=''; }, 1200);
+    toast('消息追加至：'+agentKey, 'info');
     return;
   }
   // ---- 新建卡片 ----
+  const flagColor = isConfirmed?'var(--red)':isSuspected?'var(--amber)':'var(--border)';
+  const statColor = isConfirmed?'var(--red)':isSuspected?'var(--amber)':'var(--text-dim)';
   const card = document.createElement('div');
-  card.className = 'cc' + (isConfirmed?' warn':isSuspected?' warn':'');
-  card.style.borderLeft = isConfirmed?'2px solid var(--red)':isSuspected?'2px solid var(--amber)':'';
+  card.className = 'cc' + (isConfirmed||isSuspected?' warn':'');
+  card.style.borderLeft = `2px solid ${flagColor}`;
   card.dataset.cfId = id;
   card.dataset.agent = agentKey;
+  // 调查员代号徽章
+  const avCode = agCode || '?';
+  const avColor = AGENTS[agCode]?.cls==='online'?'var(--green)':AGENTS[agCode]?.cls==='warn'?'var(--amber)':'var(--grey)';
   card.innerHTML = `
     <div class="cc-row" onclick="cycleCC(this)">
-      <div class="cc-av" style="font-size:8px;border-color:${isConfirmed?'var(--red)':isSuspected?'var(--amber)':'var(--border)'}">?</div>
-      <div class="cc-name" style="font-size:10px">${srcFull.slice(0,20)}</div>
-      <div class="cc-stat" style="color:${isConfirmed?'var(--red)':isSuspected?'var(--amber)':'var(--text-dim)'}">● 已接</div>
+      <div class="cc-av" style="border-color:${avColor};color:${avColor}">${avCode}</div>
+      <div class="cc-name">${srcFull.slice(0,24)}</div>
+      <div class="cc-stat" style="color:${statColor}">● 已接</div>
       <button class="cc-tog" onclick="event.stopPropagation();cycleCC(this.closest('.cc').querySelector('.cc-row'))">▼</button>
     </div>
     <div class="cc-preview open">
-      <div class="cc-last">"${preview}"</div>
+      <div class="cc-log"><div class="cl-row"><span class="cl-t">${GT.fmt()}</span><span class="cl-msg">${preview}</span></div></div>
       <div class="cc-acts">
         <button class="bs w">申请支援</button>
-        <button class="bs b" onclick="openTransfer('未知来源','新事件')">转接</button>
+        <button class="bs b" onclick="openTransfer('${agentKey}','未知')">转接</button>
         <button class="bs d" onclick="this.closest('.cc').style.opacity='.3';this.closest('.cc').style.pointerEvents='none';toast('通讯单已关闭','info')">关闭</button>
       </div>
     </div>`;
   scroll.appendChild(card);
-  toast('已接取：'+srcFull.slice(0,16), 'info');
+  // 右栏滚动到底部
+  scroll.scrollTop = scroll.scrollHeight;
+  toast('已接取：'+srcFull.slice(0,20), 'info');
 }
 
 function cfIgnore(id){
@@ -1326,7 +1304,7 @@ function cfIgnore(id){
 
 // 新增来电（供GT.scheduleAt或其他事件触发调用）
 let cfSeq = 10;
-function addCommFeed(src, preview, type='normal'){
+function addCommFeed(src, preview, type='normal', agentKey=''){
   cfSeq++;
   const id = 'cf'+cfSeq;
   const feed = document.getElementById('comm-feed');
@@ -1334,9 +1312,11 @@ function addCommFeed(src, preview, type='normal'){
   const cls = type==='confirmed'?'confirmed':type==='suspected'?'suspected':'';
   const flag = type==='confirmed'?'‼':type==='suspected'?'⚠':'';
   const flagCls = type==='confirmed'?'confirmed':type==='suspected'?'suspected':'';
+  const key = agentKey || src.slice(0,20);
   const item = document.createElement('div');
   item.className = 'cf-item' + (cls?' '+cls:'');
   item.dataset.id = id;
+  item.dataset.agent = key;
   item.innerHTML = `
     <div class="cf-flag ${flagCls}">${flag}</div>
     <div class="cf-body">
@@ -1522,11 +1502,7 @@ function requestStatus(agCode, agName){
   toast('已向 '+agName+' 发送状态请求，预计 '+del+' 分钟后回报','info',4000);
 }
 
-// ---- 事件自动结案请求 ----
-// 每个活跃事件记录无进展时间，超时后调查员主动发起结案/移交请求
-const EVENT_CLOSURE = {
-  'n-e027':{ name:'北区X-17异响', noProgressMin:0, threshold:480, requested:false },  // 已转接，8h后
-};
+// ---- 事件自动结案请求（数据在 events_data.js: EVENT_CLOSURE）----
 function checkEventClosure(){
   const now=GT.toMin();
   Object.entries(EVENT_CLOSURE).forEach(([nodeId,ev])=>{
@@ -1588,8 +1564,100 @@ function transferEventMonitor(nodeId, evName, cfId){
 const _origSlowCheck = GT._slowCheck.bind(GT);
 GT._slowCheck = function(){ _origSlowCheck(); checkEventClosure(); };
 
+// ============================================================
+// 节点点击快速访问
+// ============================================================
+function nodeClick(type, key){
+  if(type==='ag'){
+    // 高亮右栏通讯卡；如无则滚动到对应区域并toast提示
+    const agCode = key;
+    const agName = AG_NAME[agCode] || agCode;
+    const scroll = document.getElementById('comm-scroll');
+    const cc = scroll?.querySelector(`.cc[data-agent="${CSS.escape(agCode)}"]`);
+    if(cc){
+      cc.scrollIntoView({behavior:'smooth',block:'nearest'});
+      cc.style.outline='1px solid var(--green)';
+      setTimeout(()=>cc.style.outline='',1500);
+      const prev = cc.querySelector('.cc-preview');
+      if(prev && !prev.classList.contains('open')) prev.classList.add('open');
+    } else {
+      // 切换到通讯面板并展示调查员信息
+      const agInfo = AGENTS[agCode];
+      const zone = agInfo?.zone || '位置未知';
+      const cls = agInfo?.cls || 'unknown';
+      const statusStr = cls==='online'?'在线':cls==='silent'?'沉默中':cls==='warn'?'待接异常':'状态未知';
+      toast(`${agName} — ${statusStr} | ${zone}`, 'info', 5000);
+    }
+    // 同时高亮左栏事件看板中属于此调查员的事件卡
+    document.querySelectorAll('.ev').forEach(card=>{
+      const agEl = card.querySelector('.ev-ag');
+      if(agEl && agEl.textContent.includes(agCode)){
+        card.style.outline='1px solid var(--green)';
+        setTimeout(()=>card.style.outline='',1500);
+      }
+    });
+  } else if(type==='ev'){
+    const nodeId = key;
+    const nd = document.getElementById(nodeId);
+    const evName = nd?.querySelector('.n-name')?.textContent || nodeId;
+    // 高亮左栏对应事件卡
+    let found = false;
+    document.querySelectorAll('.ev').forEach(card=>{
+      if(card.dataset.nodeId===nodeId || card.querySelector('.ev-t')?.textContent?.includes(evName)){
+        card.scrollIntoView({behavior:'smooth',block:'nearest'});
+        card.style.outline='1px solid var(--amber)';
+        setTimeout(()=>card.style.outline='',1500);
+        found = true;
+      }
+    });
+    if(!found) toast(`事件: ${evName} — 右栏可查看相关通讯`, 'info', 4000);
+  } else if(type==='xfer'){
+    toast(`接管节点: ${key}`, 'info', 3000);
+  }
+}
 
-const STATUS_MAP={
+// ============================================================
+// 情报标签：挂在事件节点上的蓝色小标
+// ============================================================
+const intelTagCount = {}; // { nodeId: count }
+
+function addIntelTag(nodeId, text){
+  const nd = document.getElementById(nodeId);
+  if(!nd) return;
+  intelTagCount[nodeId] = (intelTagCount[nodeId]||0)+1;
+  const n = intelTagCount[nodeId];
+  // 在节点内创建标签（绝对定位在节点底部外）
+  const tag = document.createElement('div');
+  tag.className = 'intel-tag';
+  tag.title = text || '';
+  tag.textContent = `情报${n}`;
+  tag.style.bottom = `${-18 - (n-1)*18}px`; // 多个情报垂直堆叠
+  nd.appendChild(tag);
+  // 同时连一条蓝色虚线到节点（加入LINKS）
+  // 创建一个虚拟节点表示情报锚点（不直接可见）
+  LINKS = LINKS.filter(l=>!(l[0]===nodeId+'_intel'+n));
+  // 蓝色虚线连接标记：用SVG直接绘制小圆点而不是节点连线
+  requestAnimationFrame(()=>{
+    const svg = document.getElementById('map-svg');
+    if(!svg) return;
+    const inner = document.getElementById('map-inner');
+    const mc = document.getElementById('map-canvas');
+    if(!inner||!mc) return;
+    const ms2 = parseFloat(inner.style.transform?.match(/scale\(([^)]+)\)/)?.[1]) || ms;
+    const mx2 = parseFloat(inner.style.left) || mx;
+    const my2 = parseFloat(inner.style.top) || my;
+    const nx = parseFloat(nd.style.left)*ms2 + mx2 + nd.offsetWidth*ms2/2;
+    const ny = parseFloat(nd.style.top)*ms2 + my2 + nd.offsetHeight*ms2 + 4;
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx', nx); dot.setAttribute('cy', ny+4+(n-1)*18*ms2);
+    dot.setAttribute('r','3'); dot.setAttribute('fill','var(--blue)');
+    dot.setAttribute('opacity','0.8'); dot.id='intel-dot-'+nodeId+'-'+n;
+    svg.appendChild(dot);
+  });
+  bulletin(`情报 ${n} — ${nd.querySelector('.n-name')?.textContent||nodeId}`, text||'新情报已关联至事件节点', 'warn', 6000);
+}
+
+
   '提交':{cls:'pend',txt:'待审批'},
   '标记':{cls:'flag',txt:'已标记'},
   '归档':{cls:'filed',txt:'已归档'}
@@ -1787,18 +1855,60 @@ let ms=0.4,mx=0,my=0;
 const inner=document.getElementById('map-inner');
 const canvas=document.getElementById('map-canvas');
 const svg=document.getElementById('map-svg');
-let LINKS=[
-  ['n-av','n-e031','#ff4a4a',.5],
-  ['n-lz','n-e029','#ffb84a',.4],
-  ['n-rf','n-e026','#ffb84a',.3],
-  ['n-x17','n-e027','#4ab8ff',.3]
-];
+// LINKS 由 events_data.js 的 MAP_LINKS_INIT 初始化
+let LINKS = (typeof MAP_LINKS_INIT !== 'undefined') ? [...MAP_LINKS_INIT] : [];
 
 // ---- 事件节点计数器 ----
 let evNodeSeq=100;
 
-// ---- 新建地图节点并可选连线到调查员 ----
-function spawnEventNode(evName,agNodeId){
+// ---- 从 MAP_NODES 动态生成地图节点 ----
+function spawnMapNodes(){
+  if(typeof MAP_NODES === 'undefined') return;
+  const mi = document.getElementById('map-inner');
+  if(!mi) return;
+  MAP_NODES.forEach(n=>{
+    if(document.getElementById(n.id)) return; // 已存在则跳过
+    const nd = document.createElement('div');
+    const isAg   = n.type==='ag';
+    const isAgLv1= n.type==='ag-lv1';
+    const isEvHi = n.type==='ev-hi';
+    const isEv   = n.type==='ev' || isEvHi;
+    const isXfer = n.type==='xfer';
+    nd.id = n.id;
+    nd.style.left = n.left+'px';
+    nd.style.top  = n.top+'px';
+    if(isAg)    { nd.className='node node-ag'; nd.setAttribute('onclick',`nodeClick('ag','${n.code}')`); }
+    if(isAgLv1) { nd.className='node node-ag lv1'; nd.setAttribute('onclick',`nodeClick('ag','${n.code}')`); }
+    if(isEvHi)  { nd.className='node node-ev node-ev-hi'; nd.setAttribute('onclick',`nodeClick('ev','${n.id}')`); }
+    if(n.type==='ev') { nd.className='node node-ev'; nd.setAttribute('onclick',`nodeClick('ev','${n.id}')`); }
+    if(isXfer)  { nd.className='node node-xfer'; nd.setAttribute('onclick',`nodeClick('xfer','${n.name}')`); }
+    const pulseHtml = n.pulse ? '<div class="n-pulse"></div>' : '';
+    const subStyle = n.subColor ? ` style="color:${n.subColor}"` : (isAg&&n.cls==='online'?' style="color:var(--green-dim)"':isAg&&n.cls==='silent'?' style="color:var(--grey)"':isAg&&n.cls==='warn'?' style="color:var(--amber)"':' style="color:var(--text-dim)"');
+    nd.innerHTML = `<div class="nb">${n.label||''}${pulseHtml}</div><div class="n-name">${n.name}</div>${n.sub?`<div class="n-name"${subStyle}>${n.sub}</div>`:''}`;
+    // 拖拽绑定
+    nd.addEventListener('mousedown',e=>{
+      if(e.target.tagName==='BUTTON') return;
+      e.stopPropagation();
+      nd._ds={sx:e.clientX,sy:e.clientY,ox:parseFloat(nd.style.left),oy:parseFloat(nd.style.top)};
+      nd._dragging=true;
+    });
+    // 支援拖拽落点
+    if(isEv) bindSupDrop(nd);
+    mi.insertBefore(nd, mi.firstChild); // 插在最前，sup-card保持在后
+  });
+  requestAnimationFrame(drawLinks);
+}
+
+// ---- 从 COMM_FEED_INIT 填充开局通讯流水线 ----
+function initCommFeed(){
+  if(typeof COMM_FEED_INIT === 'undefined') return;
+  // 反向遍历（最后一条在顶部）
+  [...COMM_FEED_INIT].reverse().forEach(item=>{
+    addCommFeed(item.src, item.preview, item.type||'normal', item.agent||'');
+  });
+}
+
+
   const canvas=document.getElementById('map-inner');
   if(!canvas)return null;
   const id='n-ev-'+evNodeSeq++;
@@ -1946,6 +2056,19 @@ document.addEventListener('mousemove',e=>{
 });
 document.addEventListener('mouseup',()=>{nd=null;sd=null;});
 mreset();
+
+// ---- 从 events_data.js 初始化地图节点 + 通讯流水线 ----
+spawnMapNodes();
+initCommFeed();
+
+// ---- 注册 CALL_EVENTS 定时调度 ----
+if(typeof CALL_EVENTS !== 'undefined'){
+  CALL_EVENTS.forEach(evt=>{
+    const t=evt.triggerMin;
+    const tD=Math.floor(t/1440),tH=Math.floor((t%1440)/60),tM=t%60;
+    GT.scheduleAt({atDay:tD,atHour:tH,atMin:tM},()=>queueCall(evt));
+  });
+}
 
 </script>
 </body>
