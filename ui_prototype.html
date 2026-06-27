@@ -147,6 +147,8 @@ body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;
 .bs:hover{border-color:var(--green);color:var(--green);}
 .bs.w{border-color:var(--amber-dim);color:var(--amber);}
 .bs.w:hover{border-color:var(--amber);}
+.bs.g{border-color:var(--green-dim);color:var(--green);}
+.bs.g:hover{border-color:var(--green);}
 .bs.b{border-color:var(--blue-dim);color:var(--blue);}
 .bs.b:hover{border-color:var(--blue);}
 .bs.d{border-color:var(--red-dim);color:var(--red);}
@@ -1102,10 +1104,16 @@ function toggleInbox(){
 // ============================================================
 // 事件系统
 // ============================================================
+// 事件系统：用 data-node-id 作为唯一键，EV_NODE_MAP 保留兼容
 const EV_NODE_MAP={'ev-031':'n-e031','ev-029':'n-e029','ev-027':'n-e027','ev-026':'n-e026'};
 (function initEvIds(){
-  const ids=['ev-031','ev-029','ev-027','ev-026','ev-x17'];
-  document.querySelectorAll('.ev').forEach((el,i)=>{if(ids[i])el.dataset.evid=ids[i];});
+  // 优先用 data-node-id；若有 data-evid 兼容旧逻辑
+  document.querySelectorAll('.ev[data-node-id]').forEach(el=>{
+    const nid = el.dataset.nodeId;
+    // 反向查evid
+    const evid = Object.keys(EV_NODE_MAP).find(k=>EV_NODE_MAP[k]===nid);
+    if(evid && !el.dataset.evid) el.dataset.evid = evid;
+  });
 })();
 let selectedEvNode=null;
 function selEv(el){
@@ -1219,16 +1227,12 @@ function cfAccept(id){
   // ---- 优先使用 data-agent；否则从来源提取调查员代号（取空格前第一词） ----
   const agentKey = item.dataset.agent || srcFull.split(/[\s\/]/)[0].trim().slice(0,12);
 
-  // ---- 如果是 CALL_EVENTS 调查员来电 → 打开通讯终端 ----
-  const agCode = Object.keys(AGENTS).find(k=>item.dataset.agent===k || srcFull.startsWith(AGENTS[k]?.name?.slice(0,4)));
-  const pendingCall = CALL_EVENTS.find(ev=>ev.agCode===agCode && !termMap[ev.id] && ev.id.includes('call'));
-  if(agCode && pendingCall){
-    // 确保 AGENTS 里有这个调查员
-    if(AGENTS[agCode]){
-      queueCall(pendingCall);
-      return;
-    }
-  }
+  // ---- 匹配调查员代号（用于通讯卡显示）----
+  const agCode = Object.keys(AGENTS).find(k=>
+    item.dataset.agent===k ||
+    srcFull.startsWith(AGENTS[k]?.name?.slice(0,4)) ||
+    srcFull.startsWith(AGENTS[k]?.name?.split('·')[0])
+  ) || null;
 
   const scroll = document.getElementById('comm-scroll');
   // ---- 查重：同 agentKey 是否已有卡片 ----
@@ -1283,7 +1287,8 @@ function cfAccept(id){
     <div class="cc-preview open">
       <div class="cc-log"><div class="cl-row"><span class="cl-t">${GT.fmt()}</span><span class="cl-msg">${preview}</span></div></div>
       <div class="cc-acts">
-        <button class="bs w">申请支援</button>
+        <button class="bs w" onclick="requestStatus('${agCode||''}','${srcFull.slice(0,12)}')">请求回报</button>
+        <button class="bs g" onclick="assignAgentToEvent('${agCode||avCode}','${srcFull.slice(0,20)}')">指派事件</button>
         <button class="bs b" onclick="openTransfer('${agentKey}','未知')">转接</button>
         <button class="bs d" onclick="this.closest('.cc').style.opacity='.3';this.closest('.cc').style.pointerEvents='none';toast('通讯单已关闭','info')">关闭</button>
       </div>
@@ -1299,6 +1304,57 @@ function cfIgnore(id){
   if(!item) return;
   item.style.transition='opacity .3s';item.style.opacity='0';
   setTimeout(()=>{item.classList.add('ignored');item.style.opacity='';updateCFCount();},300);
+}
+
+// 指派调查员到事件看板卡片
+function assignAgentToEvent(agCode, agName){
+  // 收集未分配事件列表
+  const evCards = [...document.querySelectorAll('.ev')].filter(c=>{
+    const ag = c.querySelector('.ev-ag');
+    return ag && (ag.textContent.includes('未分配') || ag.textContent.trim()==='');
+  });
+  if(evCards.length===0){
+    toast('当前无未分配事件','warn'); return;
+  }
+  // 若只有一个事件，直接指派
+  if(evCards.length===1){
+    doAssign(agCode, agName, evCards[0]); return;
+  }
+  // 多个事件：提示选择
+  const names = evCards.map((c,i)=>`${i+1}. ${c.querySelector('.ev-name')?.textContent||'未知'}`).join('\n');
+  const choice = prompt(`将 ${agName} 指派到哪个事件？\n${names}\n\n输入序号：`);
+  const idx = parseInt(choice)-1;
+  if(isNaN(idx)||idx<0||idx>=evCards.length){ toast('取消指派','info'); return; }
+  doAssign(agCode, agName, evCards[idx]);
+}
+
+function doAssign(agCode, agName, evCard){
+  const evName = evCard.querySelector('.ev-name')?.textContent||'未知事件';
+  const agEl = evCard.querySelector('.ev-ag');
+  if(agEl){
+    agEl.textContent = '● '+agName.slice(0,8);
+    agEl.className = 'ev-ag on';
+  }
+  // 更新调查员节点状态区域
+  const agNode = document.getElementById(AG_NODE[agCode]);
+  if(agNode){
+    const subEl = agNode.querySelectorAll('.n-name')[1];
+    if(subEl) subEl.textContent = '→ '+evName.slice(0,8);
+  }
+  // 如有事件节点连线不存在则建立连线
+  const nodeId = evCard.dataset.nodeId;
+  const agNodeId = AG_NODE[agCode];
+  if(nodeId && agNodeId && !LINKS.find(l=>l[0]===agNodeId&&l[1]===nodeId)){
+    LINKS.push([agNodeId, nodeId, '#4aff9a', 0.5]);
+    requestAnimationFrame(drawLinks);
+  }
+  toast(`${agName} → ${evName} 指派完成`, 'info', 4000);
+  // 向通讯流加一条指派确认
+  addCommFeed(
+    agName+' / 指派确认',
+    `已指派前往"${evName}"，预计完成初始评估后回报。`,
+    'normal', agCode
+  );
 }
 
 // 新增来电（供GT.scheduleAt或其他事件触发调用）
@@ -1448,8 +1504,39 @@ function bindSupDrop(nd){
         bulletin(`情报检索完成 — ${evName}`, '法泽尔已发送检索结果', 'warn', 6000);
       });
     } else {
-      sc.innerHTML=`<div class="sc-type" style="color:${SUP_COLOR[stype]}">${SUP_LABELS[stype]}</div><div class="sc-eta" style="color:${SUP_COLOR[stype]}">已派遣</div><div class="sc-status">→ ${evName}</div>`;
+      // 医疗/武装/认知：给一个抵达时间，到期后推汇报进通讯流
+      const arrivalMin = 30 + Math.floor(Math.random()*40); // 30-70游戏分钟后抵达
+      const supLabel = SUP_LABELS[stype];
+      sc.innerHTML=`<div class="sc-type" style="color:${SUP_COLOR[stype]}">${supLabel}</div><div class="sc-eta sc-eta-dyn" style="color:${SUP_COLOR[stype]}">ETA ${arrivalMin}m</div><div class="sc-status">→ ${evName}</div>`;
       inner.appendChild(sc);
+      // 每秒倒计时显示
+      let remaining = arrivalMin;
+      const etaDyn = sc.querySelector('.sc-eta-dyn');
+      const etaTick = setInterval(()=>{
+        remaining -= GT.speed/60;
+        if(remaining<=0){
+          clearInterval(etaTick);
+          if(etaDyn){ etaDyn.textContent='已抵达'; etaDyn.style.color='var(--green)'; }
+        } else {
+          if(etaDyn) etaDyn.textContent = 'ETA '+(remaining>1?Math.ceil(remaining)+'m':'<1m');
+        }
+      },1000);
+      // 抵达汇报
+      const arrDueMin = GT.toMin()+arrivalMin;
+      const arrD=Math.floor(arrDueMin/1440),arrH=Math.floor((arrDueMin%1440)/60),arrM=arrDueMin%60;
+      const SUP_REPORTS = {
+        medical:'医疗待命小组已到位，人员状态良好，随时待命。',
+        armed:  '武装支援到位，区域已完成防线部署，等待进一步指示。',
+        cogn:   '认知防护小组抵达，认知屏蔽装置已启动，覆盖现场。'
+      };
+      GT.scheduleAt({atDay:arrD,atHour:arrH,atMin:arrM},()=>{
+        addCommFeed(
+          supLabel+' / '+evName,
+          SUP_REPORTS[stype]||'支援已到位，等待指示。',
+          'normal', stype+'-'+evId
+        );
+        bulletin(`支援到位 — ${evName}`, supLabel+'已抵达现场，请查看通讯流水线', 'warn', 6000);
+      });
     }
     sc.addEventListener('mousedown',e2=>{e2.stopPropagation();sd={el:sc,sx:e2.clientX,sy:e2.clientY,ox:parseFloat(sc.style.left),oy:parseFloat(sc.style.top)};});
     requestAnimationFrame(drawLinks);
@@ -1457,6 +1544,7 @@ function bindSupDrop(nd){
   });
 }
 document.querySelectorAll('.node-ev, .node-ev-hi').forEach(nd=>bindSupDrop(nd));
+// 注：动态节点的 bindSupDrop 在 spawnMapNodes() 中已处理，此行仅兜底静态节点
 
 // ============================================================
 // requestStatus 防重复 + 调查员主动结案请求
