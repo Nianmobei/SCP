@@ -140,27 +140,11 @@ const EVENT_CLOSURE = {
 	'n-e027': { name:'北区X-17异响', noProgressMin:0, threshold:480, requested:false }
 };
 
-// ── 右栏通讯流水线初始预填（HTML硬码区替换为此处定义）───────
-// 模拟玩家开局时已存在的若干来电记录，让界面有内容感
-// type: 'normal' / 'suspected' / 'confirmed'
-const COMM_FEED_INIT = [
-	{
-		src: '陌生来电 / 站点C-7', preview: '……有人在这里，一直在这里。我觉得我认识他，但档案里没有他。',
-		type: 'normal', agent: 'unknown-c7'
-	},
-	{
-		src: '站点C-7 协调请求', preview: '人手紧缺已超出，需要增派认知安全人员入驻处理……',
-		type: 'suspected', agent: 'site-c7'
-	},
-	{
-		src: '周磊 #004 现场回报', preview: '初步排查完成，暂无发现，但有一处区域气压异常，继续监测……',
-		type: 'normal', agent: 'ZL'
-	},
-	{
-		src: '艾娃 #002 初步报告', preview: '第11封信已取样完毕，同期出现的信件共计13封，发件信息全部指向同一地址……',
-		type: 'suspected', agent: 'AV'
-	}
-];
+// ── 右栏通讯流水线初始预填 ───────────────────────────────────
+// 注意：开局的 cf-item 已直接写在 ui_prototype.html 的 #comm-feed 中
+// 此数组为空，避免重复添加；需新增开局来电请直接在 HTML 里加 cf-item
+// （或在此添加后删除 HTML 里对应的硬码条目）
+const COMM_FEED_INIT = [];
 
 // ============================================================
 // 【新增事件指南】
