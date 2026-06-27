@@ -1,0 +1,26 @@
+{
+  "sheets": {
+    "科研主管": {
+      "checksum": "e606fadd5dee83721345fc31605e9cc5",
+      "exported_at": "2026-06-27 11:49:16"
+    },
+    "调控主管": {
+      "checksum": "40ab04b362f13406441f216dda60ae57",
+      "exported_at": "2026-06-27 11:49:16"
+    },
+    "设施主管": {
+      "checksum": "479d7004bd995fb4dcaefc24fb64ded1",
+      "exported_at": "2026-06-27 11:49:16"
+    },
+    "执行主管": {
+      "checksum": "60f8a8a59feaa999ec422d75e9a1cf5b",
+      "exported_at": "2026-06-27 11:49:16"
+    },
+    "情报主管": {
+      "checksum": "09e5d43b990bffd7040b5c535cecf57e",
+      "exported_at": "2026-06-27 11:49:16"
+    }
+  },
+  "excel_path": "D:\\学习资料\\创作项目\\接线\\人物设定.xlsx",
+  "last_updated": "2026-06-27 11:49:16"
+}

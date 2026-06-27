@@ -1,0 +1,27 @@
+[
+  {
+    "dir": "sheet_01_data",
+    "index": 1,
+    "name": "科研主管"
+  },
+  {
+    "dir": "sheet_02_data",
+    "index": 2,
+    "name": "调控主管"
+  },
+  {
+    "dir": "sheet_03_data",
+    "index": 3,
+    "name": "设施主管"
+  },
+  {
+    "dir": "sheet_04_data",
+    "index": 4,
+    "name": "执行主管"
+  },
+  {
+    "dir": "sheet_05_data",
+    "index": 5,
+    "name": "情报主管"
+  }
+]

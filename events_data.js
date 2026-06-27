@@ -6,11 +6,36 @@
 
 // ── 调查员定义 ─────────────────────────────────────────────
 // 键为两字母代号，值含显示名/当前区域/状态/日志ID
+// style 字段：性格与语言风格简短描述，供剧情文案参考
 const AGENTS = {
-	'AV': { name:'艾娃·塞利克 #002', zone:'ZONE-B · 第十一封信', cls:'online', logId:'log-av' },
-	'LZ': { name:'林照野 #001',       zone:'ZONE-D · 值班室的人', cls:'silent', logId:'log-lz' },
-	'RF': { name:'福斯 #003',         zone:'ZONE-C · 7号仓库',   cls:'warn',   logId:'log-rf'  },
-	'ZL': { name:'周磊 #004',         zone:'ZONE-A · 待命',       cls:'idle',   logId:'log-zl'  }
+	'AV': {
+		name: '艾娃·塞利克 #002',
+		zone: 'ZONE-B · 第十一封信',
+		cls:  'online',
+		logId:'log-av',
+		style:'沉稳、直接，措辞简练，有时显得过于冷静。偏向主动汇报，少问多观察。'
+	},
+	'LZ': {
+		name: '林照野 #001',
+		zone: 'ZONE-D · 值班室的人',
+		cls:  'silent',
+		logId:'log-lz',
+		style:'寡言，回复往往只有一两句。不轻易表达情绪，但细节描述精确。停顿是他惯常的节奏。'
+	},
+	'RF': {
+		name: '福斯 #003',
+		zone: 'ZONE-C · 7号仓库',
+		cls:  'warn',
+		logId:'log-rf',
+		style:'随和，讲实际，偶尔用俗语或比喻。不喜欢拖延，倾向尽快结案拿结论。'
+	},
+	'ZL': {
+		name: '周磊 #004',
+		zone: 'ZONE-A · 待命',
+		cls:  'idle',
+		logId:'log-zl',
+		style:'谨慎，爱确认细节，有时显得啰嗦。习惯在不确定时反复复核再行动。'
+	}
 };
 
 // ── 调查员沉默超时阈值 ──────────────────────────────────────

@@ -1,0 +1,27 @@
+[
+  {
+    "dir": "sheet_01_data",
+    "index": 1,
+    "name": "异常物表格"
+  },
+  {
+    "dir": "sheet_02_data",
+    "index": 2,
+    "name": "命名规则"
+  },
+  {
+    "dir": "sheet_04_data",
+    "index": 4,
+    "name": "特遣部队"
+  },
+  {
+    "dir": "sheet_05_data",
+    "index": 5,
+    "name": "机构技术"
+  },
+  {
+    "dir": "sheet_06_data",
+    "index": 6,
+    "name": "角色"
+  }
+]
