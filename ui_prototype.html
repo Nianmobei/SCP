@@ -280,6 +280,38 @@ input[type=range]{flex:1;accent-color:var(--green);}
 #speed-ind.on{display:block;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.5);}}
 @keyframes blink{50%{opacity:0;}}
+/* ---- 邮箱系统 ---- */
+.mail-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.mail-list::-webkit-scrollbar{width:3px;}
+.mail-list::-webkit-scrollbar-thumb{background:var(--border);}
+.mail-item{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;position:relative;}
+.mail-item:hover{background:var(--bg3);}
+.mail-item.unread{border-left:2px solid var(--green);}
+.mail-item.unread .mail-subj{color:var(--text);}
+.mail-item.sys{border-left:2px solid var(--amber);}
+.mail-item.sys .mail-subj{color:var(--amber);}
+.mail-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:4px;}
+.mail-item.sys .mail-dot{background:var(--amber);}
+.mail-item.read .mail-dot{background:transparent;border:1px solid var(--border);}
+.mail-meta{flex:1;overflow:hidden;}
+.mail-from{font-size:9px;color:var(--text-dim);letter-spacing:.5px;margin-bottom:2px;}
+.mail-subj{font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mail-time{font-size:9px;color:var(--text-dim);flex-shrink:0;}
+.mail-body{flex:1;overflow-y:auto;padding:14px 16px;display:none;flex-direction:column;gap:10px;}
+.mail-body.open{display:flex;}
+.mail-body::-webkit-scrollbar{width:3px;}
+.mb-head{border-bottom:1px solid var(--border);padding-bottom:10px;display:flex;flex-direction:column;gap:4px;}
+.mb-field{display:flex;gap:8px;font-size:10px;}
+.mb-k{color:var(--text-dim);width:36px;flex-shrink:0;}
+.mb-v{color:var(--text);}
+.mb-subj{font-size:13px;color:var(--green);letter-spacing:.5px;margin-top:4px;}
+.mb-content{font-size:11px;color:var(--text);line-height:2;white-space:pre-wrap;border-left:2px solid var(--border);padding-left:10px;}
+.mb-redact{background:var(--text);color:var(--text);border-radius:1px;letter-spacing:.5px;user-select:none;}
+.mb-sig{font-size:10px;color:var(--text-dim);margin-top:8px;border-top:1px solid var(--border);padding-top:8px;line-height:1.8;}
+.mb-back{background:none;border:1px solid var(--border);color:var(--text-dim);font-family:'Courier New',monospace;font-size:9px;padding:3px 8px;cursor:pointer;letter-spacing:.5px;align-self:flex-start;margin-bottom:6px;}
+.mb-back:hover{border-color:var(--green);color:var(--green);}
+.mail-empty{flex:1;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-dim);letter-spacing:2px;}
+#mail-unread-badge{display:none;position:absolute;top:-4px;right:-4px;background:var(--amber);color:var(--bg);font-size:8px;padding:0 3px;min-width:14px;text-align:center;}
 </style>
 </head>
 <body>
@@ -396,6 +428,7 @@ input[type=range]{flex:1;accent-color:var(--green);}
   <button class="ba">[ 标记等级 ]</button>
   <button class="ba r" onclick="openW('ws')">[ 特遣队调度 ]</button>
   <button class="ba a">[ 升级申请 ]</button>
+  <button class="ba" style="position:relative" onclick="openW('win-mail');markMailRead()">[ 邮件 ]<span id="mail-unread-badge">1</span></button>
   <span class="bot-stat">SHIFT 07 | 值班中 | 复盘 <span style="color:var(--amber)">72h</span></span>
 </div>
 <div class="fw" id="win-settings" style="top:50px;left:calc(50% - 180px);width:360px;min-height:0;resize:none;border-color:var(--green);">
@@ -480,6 +513,75 @@ input[type=range]{flex:1;accent-color:var(--green);}
     <div class="sl-row"><span class="sl-t">D+6 14:30</span><span class="sl-m">ε6 外围封锁完成，进入清查</span><span class="sl-g ac">进行中</span></div>
     <div class="sl-row"><span class="sl-t">D+4 09:15</span><span class="sl-m">X-17移交ε6，接管确认</span><span class="sl-g dn">批准</span></div>
     <div class="sl-row"><span class="sl-t">D+3 22:40</span><span class="sl-m">调度申请提交，等待审批</span><span class="sl-g pd">待批</span></div>
+  </div>
+</div>
+<!-- ============================================================ -->
+<!-- 邮箱系统浮动窗口                                              -->
+<!-- ============================================================ -->
+<div class="fw" id="win-mail" style="top:55px;left:calc(50% - 280px);width:560px;height:500px;border-color:var(--amber);">
+  <div class="fh" onmousedown="startDrag(event,'win-mail')">
+    <span class="ft">INTERNAL MAIL — 内部邮件</span>
+    <span style="font-size:9px;color:var(--amber);margin-left:4px" id="mail-unread-count"></span>
+    <button class="fc" onclick="closeW('win-mail')">×</button>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden;">
+    <!-- 邮件列表 -->
+    <div class="mail-list" id="mail-list-panel" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);">
+      <div class="mail-item unread sys" onclick="openMail(this,'mail-0')">
+        <div class="mail-dot"></div>
+        <div class="mail-meta">
+          <div class="mail-from">纳薇尔 / 调度部</div>
+          <div class="mail-subj">你的复职说明</div>
+        </div>
+        <div class="mail-time">D+7</div>
+      </div>
+    </div>
+    <!-- 邮件正文区 -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="mail-empty" id="mail-empty-hint">← 选择一封邮件</div>
+      <!-- 邮件 0：复职说明 -->
+      <div class="mail-body" id="mail-0">
+        <button class="mb-back" onclick="closeMail('mail-0')">← 返回列表</button>
+        <div class="mb-head">
+          <div class="mb-field"><span class="mb-k">发件人</span><span class="mb-v">纳薇尔·<span class="mb-redact">██</span>  /  调度部主管  /  Soph分支节点</span></div>
+          <div class="mb-field"><span class="mb-k">收件人</span><span class="mb-v">张明亮  /  调度部  /  班次07  /  LV.2 试用评估期</span></div>
+          <div class="mb-field"><span class="mb-k">日期</span><span class="mb-v">D+7 07:58  /  加密信道</span></div>
+          <div class="mb-subj">RE: 复职确认 — 档案编号 DISP-<span class="mb-redact">███</span>-R</div>
+        </div>
+        <div class="mb-content">明亮，
+
+你应该不记得我了。
+
+这没关系。协议规定我必须这么告诉你：记忆清扫是标准程序，
+不是惩罚，也不是针对你个人。
+
+你是调度部的资深主管。在 <span class="mb-redact">████████████████</span> 事件中，
+你在现场进行最后的通讯协调，直到 <span class="mb-redact">███</span> 级污染信号确认。
+现场回收你的时候你已经意识不清了。
+
+手术进行了 <span class="mb-redact">██</span> 小时。
+人格加固方案由第四局介入，标准B型。
+你的记忆清扫覆盖了最近 <span class="mb-redact">██</span> 个月。
+
+现在的你通过了所有复岗评估指标。
+但程序要求你以 LV.2 重新起步，
+直到你在实际调度工作中重新证明判断力。
+
+我知道这对你来说可能难以接受——
+或者你根本没有那种感受了，这也是正常的。
+
+你以前做这份工作做得很好。
+比我预期的时间快很多。
+
+班次07今天开始，调查员和事件你会慢慢认识的。
+有什么问题，发给我。
+
+不过别太多。我快过劳死了。</div>
+        <div class="mb-sig">— 纳薇尔
+调度部主管  ·  Soph分支  ·  内部加密信道
+"您好，部长，我是纳薇尔。很高兴再次见面。"</div>
+      </div>
+    </div>
   </div>
 </div>
 <script>
@@ -904,8 +1006,69 @@ document.querySelectorAll('.inbox-item').forEach(item=>{
 });
 
 // ============================================================
-// 档案库
+// 邮箱系统
 // ============================================================
+let mailUnread = 1;
+
+function updateMailBadge(){
+  const badge = document.getElementById('mail-unread-badge');
+  const cnt = document.getElementById('mail-unread-count');
+  if(mailUnread > 0){
+    badge.style.display = 'block';
+    badge.textContent = mailUnread;
+    if(cnt) cnt.textContent = '未读 '+mailUnread;
+  } else {
+    badge.style.display = 'none';
+    if(cnt) cnt.textContent = '';
+  }
+}
+
+function openMail(itemEl, bodyId){
+  // 隐藏所有正文
+  document.querySelectorAll('.mail-body').forEach(b=>b.classList.remove('open'));
+  document.getElementById('mail-empty-hint').style.display='none';
+  // 显示目标正文
+  const body = document.getElementById(bodyId);
+  if(body) body.classList.add('open');
+  // 标记已读
+  if(itemEl.classList.contains('unread')){
+    itemEl.classList.remove('unread');
+    itemEl.classList.add('read');
+    mailUnread = Math.max(0, mailUnread - 1);
+    updateMailBadge();
+  }
+}
+
+function closeMail(bodyId){
+  document.getElementById(bodyId).classList.remove('open');
+  document.getElementById('mail-empty-hint').style.display='flex';
+}
+
+function markMailRead(){
+  // 打开邮箱时不自动标记，让玩家主动点击阅读
+}
+
+// 新增邮件（供后续事件触发调用）
+function addMail(from, subj, bodyHtml, type='normal'){
+  mailUnread++;
+  updateMailBadge();
+  const mid = 'mail-'+Date.now();
+  // 列表项
+  const item = document.createElement('div');
+  item.className = 'mail-item unread' + (type==='sys'?' sys':'');
+  item.onclick = ()=>openMail(item, mid);
+  item.innerHTML = `<div class="mail-dot"></div><div class="mail-meta"><div class="mail-from">${from}</div><div class="mail-subj">${subj}</div></div><div class="mail-time">${GT.fmt().slice(0,4)}</div>`;
+  document.getElementById('mail-list-panel').insertBefore(item, document.getElementById('mail-list-panel').firstChild);
+  // 正文
+  const body = document.createElement('div');
+  body.className = 'mail-body';
+  body.id = mid;
+  body.innerHTML = `<button class="mb-back" onclick="closeMail('${mid}')">← 返回列表</button>${bodyHtml}`;
+  document.querySelector('#win-mail > div > div:last-child').appendChild(body);
+  toast('新邮件：'+subj, 'warn', 4000);
+}
+
+updateMailBadge();
 const STATUS_MAP={
   '提交':{cls:'pend',txt:'待审批'},
   '标记':{cls:'flag',txt:'已标记'},
