@@ -1277,6 +1277,9 @@ function cfAccept(id){
   // 调查员代号徽章
   const avCode = agCode || '?';
   const avColor = AGENTS[agCode]?.cls==='online'?'var(--green)':AGENTS[agCode]?.cls==='warn'?'var(--amber)':'var(--grey)';
+  const safeAgCode = (agCode||'').replace(/'/g,'');
+  const safeName   = srcFull.slice(0,20).replace(/'/g,'');
+  const safeKey    = agentKey.replace(/'/g,'');
   card.innerHTML = `
     <div class="cc-row" onclick="cycleCC(this)">
       <div class="cc-av" style="border-color:${avColor};color:${avColor}">${avCode}</div>
@@ -1287,9 +1290,9 @@ function cfAccept(id){
     <div class="cc-preview open">
       <div class="cc-log"><div class="cl-row"><span class="cl-t">${GT.fmt()}</span><span class="cl-msg">${preview}</span></div></div>
       <div class="cc-acts">
-        <button class="bs w" onclick="requestStatus('${agCode||''}','${srcFull.slice(0,12)}')">请求回报</button>
-        <button class="bs g" onclick="assignAgentToEvent('${agCode||avCode}','${srcFull.slice(0,20)}')">指派事件</button>
-        <button class="bs b" onclick="openTransfer('${agentKey}','未知')">转接</button>
+        <button class="bs w" onclick="requestStatus(this.dataset.ag,this.dataset.nm)" data-ag="${safeAgCode}" data-nm="${safeName}">请求回报</button>
+        <button class="bs g" onclick="assignAgentToEvent(this.dataset.ag,this.dataset.nm)" data-ag="${safeAgCode}" data-nm="${safeName}">指派事件</button>
+        <button class="bs b" onclick="openTransfer(this.dataset.key,'未知')" data-key="${safeKey}">转接</button>
         <button class="bs d" onclick="this.closest('.cc').style.opacity='.3';this.closest('.cc').style.pointerEvents='none';toast('通讯单已关闭','info')">关闭</button>
       </div>
     </div>`;
@@ -1964,11 +1967,23 @@ function spawnMapNodes(){
     nd.id = n.id;
     nd.style.left = n.left+'px';
     nd.style.top  = n.top+'px';
-    if(isAg)    { nd.className='node node-ag'; nd.setAttribute('onclick',`nodeClick('ag','${n.code}')`); }
-    if(isAgLv1) { nd.className='node node-ag lv1'; nd.setAttribute('onclick',`nodeClick('ag','${n.code}')`); }
-    if(isEvHi)  { nd.className='node node-ev node-ev-hi'; nd.setAttribute('onclick',`nodeClick('ev','${n.id}')`); }
-    if(n.type==='ev') { nd.className='node node-ev'; nd.setAttribute('onclick',`nodeClick('ev','${n.id}')`); }
-    if(isXfer)  { nd.className='node node-xfer'; nd.setAttribute('onclick',`nodeClick('xfer','${n.name}')`); }
+    // className 和 onclick 用 if-else，避免覆盖
+    if(isAg){
+      nd.className='node node-ag';
+      nd.setAttribute('onclick',`nodeClick('ag','${n.code}')`);
+    } else if(isAgLv1){
+      nd.className='node node-ag lv1';
+      nd.setAttribute('onclick',`nodeClick('ag','${n.code}')`);
+    } else if(isEvHi){
+      nd.className='node node-ev node-ev-hi';
+      nd.setAttribute('onclick',`nodeClick('ev','${n.id}')`);
+    } else if(n.type==='ev'){
+      nd.className='node node-ev';
+      nd.setAttribute('onclick',`nodeClick('ev','${n.id}')`);
+    } else if(isXfer){
+      nd.className='node node-xfer';
+      nd.setAttribute('onclick',`nodeClick('xfer','${n.name}')`);
+    }
     const pulseHtml = n.pulse ? '<div class="n-pulse"></div>' : '';
     const subStyle = n.subColor ? ` style="color:${n.subColor}"` : (isAg&&n.cls==='online'?' style="color:var(--green-dim)"':isAg&&n.cls==='silent'?' style="color:var(--grey)"':isAg&&n.cls==='warn'?' style="color:var(--amber)"':' style="color:var(--text-dim)"');
     nd.innerHTML = `<div class="nb">${n.label||''}${pulseHtml}</div><div class="n-name">${n.name}</div>${n.sub?`<div class="n-name"${subStyle}>${n.sub}</div>`:''}`;
@@ -2142,6 +2157,8 @@ mreset();
 spawnMapNodes();   // 动态创建所有地图节点
 // 动态节点已在 spawnMapNodes 末尾调用 bindNodeDrag，sup-card 也需绑定
 document.querySelectorAll('.sup-card').forEach(c=>bindCardDrag(c));
+// 节点创建完后重新应用地图变换并重绘连线
+setTimeout(()=>{ applyMap(); drawLinks(); }, 50);
 initCommFeed();
 
 // ---- 注册 CALL_EVENTS 定时调度 ----
