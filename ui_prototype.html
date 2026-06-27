@@ -407,7 +407,6 @@ input[type=range]{flex:1;accent-color:var(--green);}
       <svg id="map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div id="map-inner">
         <!-- 地图节点由 JS spawnMapNodes() 从 events_data.js MAP_NODES 生成 -->
-        <div class="sup-card" id="sc-med" style="left:870px;top:490px"><div class="sc-type">◈ 医疗待命</div><div class="sc-eta" id="sc-eta">ETA 00:42</div><div class="sc-status">前往 第十一封信</div></div>
       </div>
       <div class="map-ctrl"><button class="mbt" onclick="mzoom(1.2)">+</button><button class="mbt" onclick="mzoom(1/1.2)">−</button><button class="mbt" onclick="mreset()">⊙</button></div>
       <div id="support-toolbar">
@@ -1885,17 +1884,12 @@ function spawnMapNodes(){
     const pulseHtml = n.pulse ? '<div class="n-pulse"></div>' : '';
     const subStyle = n.subColor ? ` style="color:${n.subColor}"` : (isAg&&n.cls==='online'?' style="color:var(--green-dim)"':isAg&&n.cls==='silent'?' style="color:var(--grey)"':isAg&&n.cls==='warn'?' style="color:var(--amber)"':' style="color:var(--text-dim)"');
     nd.innerHTML = `<div class="nb">${n.label||''}${pulseHtml}</div><div class="n-name">${n.name}</div>${n.sub?`<div class="n-name"${subStyle}>${n.sub}</div>`:''}`;
-    // 拖拽绑定
-    nd.addEventListener('mousedown',e=>{
-      if(e.target.tagName==='BUTTON') return;
-      e.stopPropagation();
-      nd._ds={sx:e.clientX,sy:e.clientY,ox:parseFloat(nd.style.left),oy:parseFloat(nd.style.top)};
-      nd._dragging=true;
-    });
     // 支援拖拽落点
     if(isEv) bindSupDrop(nd);
     mi.insertBefore(nd, mi.firstChild); // 插在最前，sup-card保持在后
   });
+  // 把新节点也纳入拖拽绑定（复用 bindNodeDrag）
+  mi.querySelectorAll('.node').forEach(n=>bindNodeDrag(n));
   requestAnimationFrame(drawLinks);
 }
 
@@ -1908,29 +1902,24 @@ function initCommFeed(){
   });
 }
 
-
-  const canvas=document.getElementById('map-inner');
-  if(!canvas)return null;
+// ---- 运行时新建事件节点（标记新事件时调用）----
+function spawnEventNode(evName, agNodeId){
+  const mi=document.getElementById('map-inner');
+  if(!mi) return null;
   const id='n-ev-'+evNodeSeq++;
-  // 在当前视口内随机空位
   const px=Math.round(100+Math.random()*600);
   const py=Math.round(100+Math.random()*400);
   const nd=document.createElement('div');
-  nd.className='node node-ev';nd.id=id;
-  nd.style.left=px+'px';nd.style.top=py+'px';
+  nd.className='node node-ev'; nd.id=id;
+  nd.style.left=px+'px'; nd.style.top=py+'px';
   nd.innerHTML=`<div class="nb"></div><div class="n-name">${evName}</div><div class="n-name" style="color:var(--amber-dim)">新报告</div>`;
-  canvas.appendChild(nd);
-  // 绑定拖拽
-  nd.addEventListener('mousedown',e=>{
-    e.stopPropagation();
-    nd._ds={sx:e.clientX,sy:e.clientY,ox:parseFloat(nd.style.left),oy:parseFloat(nd.style.top)};
-    nd._dragging=true;
-  });
-  // 连线到调查员节点（如果有）
-  const agMap={'AV':'n-av','LZ':'n-lz','RF':'n-rf'};
+  mi.appendChild(nd);
+  bindNodeDrag(nd);   // 统一拖拽
+  bindSupDrop(nd);    // 支援落点
+  const agMap={'AV':'n-av','LZ':'n-lz','RF':'n-rf','ZL':'n-zl'};
   const agId=agNodeId||(agMap[Object.keys(agMap).find(k=>evName.includes(k))]);
-  if(agId&&document.getElementById(agId)){
-    LINKS.push([agId,id,'#ffb84a',.35]);
+  if(agId && document.getElementById(agId)){
+    LINKS.push([agId, id, '#ffb84a', .35]);
   }
   requestAnimationFrame(drawLinks);
   return id;
@@ -2038,18 +2027,22 @@ if(canvas){
 }
 // 节点拖动
 let nd=null,sd=null;
-document.querySelectorAll('.node').forEach(n=>{
+function bindNodeDrag(n){
   n.addEventListener('mousedown',e=>{
+    if(e.target.closest('.map-ctrl')||e.target.closest('.map-legend')) return;
     e.stopPropagation();
     nd={el:n,sx:e.clientX,sy:e.clientY,ox:parseFloat(n.style.left),oy:parseFloat(n.style.top)};
   });
-});
-document.querySelectorAll('.sup-card').forEach(c=>{
+}
+function bindCardDrag(c){
   c.addEventListener('mousedown',e=>{
     e.stopPropagation();
     sd={el:c,sx:e.clientX,sy:e.clientY,ox:parseFloat(c.style.left),oy:parseFloat(c.style.top)};
   });
-});
+}
+// 静态节点（此时 map-inner 里暂无节点，留作后备）
+document.querySelectorAll('.node').forEach(n=>bindNodeDrag(n));
+document.querySelectorAll('.sup-card').forEach(c=>bindCardDrag(c));
 document.addEventListener('mousemove',e=>{
   if(nd){const dx=(e.clientX-nd.sx)/ms,dy=(e.clientY-nd.sy)/ms;nd.el.style.left=(nd.ox+dx)+'px';nd.el.style.top=(nd.oy+dy)+'px';requestAnimationFrame(drawLinks);}
   if(sd){const dx=(e.clientX-sd.sx)/ms,dy=(e.clientY-sd.sy)/ms;sd.el.style.left=(sd.ox+dx)+'px';sd.el.style.top=(sd.oy+dy)+'px';requestAnimationFrame(drawLinks);}
@@ -2058,7 +2051,9 @@ document.addEventListener('mouseup',()=>{nd=null;sd=null;});
 mreset();
 
 // ---- 从 events_data.js 初始化地图节点 + 通讯流水线 ----
-spawnMapNodes();
+spawnMapNodes();   // 动态创建所有地图节点
+// 动态节点已在 spawnMapNodes 末尾调用 bindNodeDrag，sup-card 也需绑定
+document.querySelectorAll('.sup-card').forEach(c=>bindCardDrag(c));
 initCommFeed();
 
 // ---- 注册 CALL_EVENTS 定时调度 ----
