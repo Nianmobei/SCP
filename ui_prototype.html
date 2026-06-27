@@ -285,6 +285,27 @@ input[type=range]{flex:1;accent-color:var(--green);}
 #speed-ind.on{display:block;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.5);}}
 @keyframes blink{50%{opacity:0;}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-50%) translateY(-8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+/* ---- 系统通报浮层 ---- */
+#bulletin-area{position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:3500;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;min-width:360px;}
+.bulletin{background:var(--bg2);border:1px solid var(--amber);color:var(--amber);font-family:'Courier New',monospace;font-size:10px;padding:7px 14px;letter-spacing:.5px;line-height:1.6;pointer-events:auto;animation:slideIn .25s ease;max-width:440px;text-align:center;}
+.bulletin.crit{border-color:var(--red);color:var(--red);}
+.bulletin .bull-hd{font-size:8px;letter-spacing:2px;color:var(--text-dim);margin-bottom:2px;}
+.bull-timer{height:2px;background:var(--amber);margin-top:5px;transition:width linear;}
+.bulletin.crit .bull-timer{background:var(--red);}
+/* ---- 地图支援工具栏 ---- */
+#support-toolbar{position:absolute;left:8px;bottom:36px;z-index:10;display:flex;flex-direction:column;gap:4px;}
+.sup-drag{width:28px;height:28px;border:1px solid #3a6a4a;background:var(--bg2);color:#6aee9a;font-size:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:grab;user-select:none;letter-spacing:.3px;line-height:1.2;}
+.sup-drag:active{cursor:grabbing;border-color:var(--green);}
+.sup-drag.med{border-color:#2a6a4a;color:#6aee9a;}
+.sup-drag.arm{border-color:#4a1a1a;color:#ff8a8a;}
+.sup-drag.cog{border-color:#2a2a6a;color:#8ab4ff;}
+.sup-drag.intel{border-color:#3a2a5a;color:#d08aff;}
+.sup-drag.snap{border-color:var(--green);background:var(--green-dim);}
+/* 沉默/失联图标（调查员节点旁） */
+.silence-icon{position:absolute;top:-8px;right:-8px;font-size:9px;padding:0 2px;background:var(--bg2);border:1px solid;z-index:5;}
+.silence-icon.warn{color:var(--amber);border-color:var(--amber-dim);}
+.silence-icon.crit{color:var(--red);border-color:var(--red-dim);animation:blink 1s infinite;}
 /* ---- 来电流水线 ---- */
 .cf-hd{display:flex;align-items:center;padding:4px 8px;gap:6px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .cf-hd-title{font-size:9px;letter-spacing:1.5px;color:var(--text-dim);flex:1;}
@@ -361,6 +382,7 @@ input[type=range]{flex:1;accent-color:var(--green);}
 </div>
 <div id="terminal-dock"></div>
 <div id="speed-ind">⏩ 时间加速 ×10 — 松开空格恢复</div>
+<div id="bulletin-area"></div>
 <div id="main">
 <div class="panel">
   <div class="ph"><div class="dot amber"></div><span class="ptitle">EVENT BOARD</span><span class="pcount">5件</span><button class="tog" onclick="togglePanel(this)">▼</button></div>
@@ -393,6 +415,12 @@ input[type=range]{flex:1;accent-color:var(--green);}
         <div class="sup-card" id="sc-med" style="left:870px;top:490px"><div class="sc-type">◈ 医疗待命</div><div class="sc-eta" id="sc-eta">ETA 00:42</div><div class="sc-status">前往 第十一封信</div></div>
       </div>
       <div class="map-ctrl"><button class="mbt" onclick="mzoom(1.2)">+</button><button class="mbt" onclick="mzoom(1/1.2)">−</button><button class="mbt" onclick="mreset()">⊙</button></div>
+      <div id="support-toolbar">
+        <div class="sup-drag med" draggable="true" data-stype="medical" title="医疗待命">◈<br>医</div>
+        <div class="sup-drag arm" draggable="true" data-stype="armed"   title="武装支援">◈<br>武</div>
+        <div class="sup-drag cog"   draggable="true" data-stype="cogn"  title="认知防护">◈<br>认</div>
+        <div class="sup-drag intel" draggable="true" data-stype="intel" title="情报支援">◈<br>情</div>
+      </div>
       <div class="map-legend">
         <div class="li"><div style="width:14px;height:10px;border:1px solid var(--green)"></div>调查员</div>
         <div class="li"><div style="width:10px;height:10px;border:1px solid var(--amber);transform:rotate(45deg)"></div>&nbsp;事件</div>
@@ -744,8 +772,23 @@ let eta=42*60;
 setInterval(()=>GT.tick(),1000);
 GT._ui();
 
+// ---- 系统通报浮层（用于沉默/升级等非操作性通知）----
+function bulletin(title, msg, type='warn', dur=6000){
+  const area = document.getElementById('bulletin-area');
+  if(!area) return;
+  const b = document.createElement('div');
+  b.className = 'bulletin' + (type==='crit'?' crit':'');
+  b.innerHTML = `<div class="bull-hd">SYSTEM BULLETIN — ${GT.fmt()}</div>${title}<br><span style="font-size:9px;color:var(--text-dim)">${msg}</span><div class="bull-timer" style="width:100%"></div>`;
+  area.appendChild(b);
+  // 倒计时条
+  const timer = b.querySelector('.bull-timer');
+  const start = performance.now();
+  function tick(now){ const p=Math.max(0,1-(now-start)/dur); timer.style.width=(p*100)+'%'; if(p>0)requestAnimationFrame(tick); }
+  requestAnimationFrame(tick);
+  setTimeout(()=>{ b.style.transition='opacity .4s'; b.style.opacity='0'; setTimeout(()=>b.remove(),400); }, dur);
+}
+
 // ---- 沉默超时检测 ----
-// 每名调查员记录 lastContactMin（游戏分钟），沉默阈值：120min=警告，240min=危险
 const INVESTIGATOR_SILENCE = {
   'AV': { lastContact: 7*1440+3*60+26, warnThresh:120, critThresh:240, warned:false, crited:false },
   'LZ': { lastContact: 1*1440+9*60+40, warnThresh:120, critThresh:240, warned:false, crited:false },
@@ -754,6 +797,17 @@ const INVESTIGATOR_SILENCE = {
 };
 const AG_CC_ID = {'AV':'log-av','LZ':'log-lz','RF':'log-rf','ZL':'log-zl'};
 const AG_NAME  = {'AV':'艾娃 #002','LZ':'林照野 #001','RF':'福斯 #003','ZL':'周磊 #004'};
+const AG_NODE  = {'AV':'n-av','LZ':'n-lz','RF':'n-rf','ZL':'n-zl'};
+
+function setSilenceIcon(nodeId, level){
+  const nd = document.getElementById(nodeId);
+  if(!nd) return;
+  let icon = nd.querySelector('.silence-icon');
+  if(level === 'none'){ if(icon) icon.remove(); return; }
+  if(!icon){ icon = document.createElement('div'); icon.className='silence-icon'; nd.appendChild(icon); }
+  icon.className = 'silence-icon ' + level;
+  icon.textContent = level==='crit' ? '⚡失联' : '○沉默';
+}
 
 function checkSilence(){
   const now = GT.toMin();
@@ -761,32 +815,29 @@ function checkSilence(){
     const silent = now - s.lastContact;
     const h = Math.floor(silent/60), m = silent%60;
     const label = h>0 ? `${h}h${m>0?m+'m':''}` : `${m}m`;
-    // 更新通讯卡状态显示
-    const ccRow = document.querySelector(`.cc-av`);
-    // 找对应调查员的 cc-stat
+    // 更新通讯卡沉默时间
     const log = document.getElementById(AG_CC_ID[code]);
-    if(!log) return;
-    const cc = log.closest('.cc');
-    if(!cc) return;
-    const stat = cc.querySelector('.cc-stat');
-    if(stat && cc.classList.contains('silent')){
-      stat.textContent = `○ 沉默 ${label}`;
+    if(log){
+      const cc = log.closest('.cc');
+      if(cc && cc.classList.contains('silent')){
+        const stat = cc.querySelector('.cc-stat');
+        if(stat) stat.textContent = `○ 沉默 ${label}`;
+      }
     }
-    // 超时警告
+    // 危险：失联超时
     if(silent >= s.critThresh && !s.crited){
       s.crited = true;
-      addCommFeed(AG_NAME[code]+' 失联警告', `已超过${s.critThresh/60}h无回报，状态未知`, 'confirmed');
-      toast(`⚠ ${AG_NAME[code]} 失联超过${s.critThresh/60}h`, 'error', 6000);
+      setSilenceIcon(AG_NODE[code], 'crit');
+      bulletin(`${AG_NAME[code]} — 失联警告`, `已超过 ${s.critThresh/60}h 无任何回报，状态未知`, 'crit', 8000);
     } else if(silent >= s.warnThresh && !s.warned){
       s.warned = true;
-      addCommFeed(AG_NAME[code]+' 沉默提醒', `已超过${s.warnThresh/60}h无回报`, 'suspected');
-      toast(`${AG_NAME[code]} 沉默超过${s.warnThresh/60}h`, 'warn', 5000);
+      setSilenceIcon(AG_NODE[code], 'warn');
+      bulletin(`${AG_NAME[code]} — 沉默超时`, `已超过 ${s.warnThresh/60}h 无回报`, 'warn', 6000);
     }
   });
 }
 
 // ---- 事件自动升级 ----
-// 未结案事件每 240 游戏分钟升一档（I→II→III），最高III级自动推来电提醒
 const EVENT_ESCALATION = {
   'n-e029': { name:'值班室的人', level:0, lastEsc: 1*1440, interval:240, maxLevel:3 },
   'n-e026': { name:'7号仓库气味', level:1, lastEsc: 5*1440+17*60, interval:300, maxLevel:3 }
@@ -801,22 +852,16 @@ function checkEventEscalation(){
     if(now - ev.lastEsc < ev.interval) return;
     ev.lastEsc = now;
     ev.level++;
-    // 更新事件卡徽章
     document.querySelectorAll('.ev').forEach(card=>{
       if(card.dataset.nodeId === nodeId){
         const badge = card.querySelector('.evb');
-        if(badge){
-          badge.className = 'evb ' + EVB_CLASS[ev.level];
-          badge.textContent = EVB_TEXT[ev.level];
-        }
-        // 时间标签加警告
+        if(badge){ badge.className = 'evb ' + EVB_CLASS[ev.level]; badge.textContent = EVB_TEXT[ev.level]; }
         const t = card.querySelector('.ev-t');
         if(t) t.classList.add('w');
       }
     });
-    // 来电提醒
-    addCommFeed('系统预警 — '+ev.name, `等级升至${EVB_TEXT[ev.level]}级，需要处置`, ev.level>=3?'confirmed':'suspected');
-    toast(`事件升级：${ev.name} → ${EVB_TEXT[ev.level]}级`, ev.level>=3?'error':'warn', 5000);
+    // 通报，不进接取队列
+    bulletin(`事件升级 — ${ev.name}`, `等级升至 ${EVB_TEXT[ev.level]} 级，建议评估处置方案`, ev.level>=3?'crit':'warn', 7000);
   });
 }
 
@@ -1062,23 +1107,6 @@ function updateCCLast(agCode,msg){
     }
   });
 }
-function requestStatus(agCode,agName){
-  const del=30+Math.floor(Math.random()*60);
-  const t=GT.day*1440+GT.hour*60+GT.min+del;
-  const tD=Math.floor(t/1440),tH=Math.floor((t%1440)/60),tM=t%60;
-  GT.scheduleAt({atDay:tD,atHour:tH,atMin:tM},()=>{
-    queueCall({
-      id:'status-'+agCode+'-'+Date.now(),agCode,
-      report:agCode==='AV'?'接线员，应你请求，我来回报。\n\n目前现场暂无新进展，一切尚在掌控中。'
-            :agCode==='LZ'?'……我在。\n\n没有新情况。':'福斯回报。目前无变化。',
-      options:[
-        {text:'已收到，继续保持',reply:'明白。',type:'normal'},
-        {text:'需要支援吗？',reply:'暂时不需要，我会联系你。',type:'normal'}
-      ]
-    });
-  });
-  toast('已向 '+agName+' 发送状态请求，预计 '+del+' 分钟后回报','info',4000);
-}
 let termDragState=null;
 function termDrag(e,tid){
   const win=document.getElementById(tid);if(!win)return;
@@ -1233,22 +1261,47 @@ function updateCFCount(){
 function cfAccept(id){
   const item = document.querySelector(`.cf-item[data-id="${id}"]`);
   if(!item) return;
-  const src = item.querySelector('.cf-src').textContent.trim().split('D+')[0].trim();
+  const srcFull = item.querySelector('.cf-src').textContent.trim().split('D+')[0].trim();
   const preview = item.querySelector('.cf-preview').textContent.trim();
   const isConfirmed = item.classList.contains('confirmed');
   const isSuspected = item.classList.contains('suspected');
   item.classList.add('accepted');
   updateCFCount();
-  // 追加到通讯记录区（轻量标签卡）
   const scroll = document.getElementById('comm-scroll');
+  // ---- 查重：提取调查员代号，查是否已有同源卡片 ----
+  // cf-item 上的 data-agent 属性（HTML里定义或addCommFeed时设置）
+  const agentKey = item.dataset.agent || srcFull.slice(0,20);
+  const existing = scroll.querySelector(`.cc[data-agent="${CSS.escape(agentKey)}"]`);
+  if(existing){
+    // 已有该调查员的卡片 → 追加消息到日志
+    let log = existing.querySelector('.cc-log');
+    if(!log){
+      // 没有cc-log时，追加到cc-last
+      const last = existing.querySelector('.cc-last');
+      if(last) last.textContent = '"'+preview+'"';
+    } else {
+      const row = document.createElement('div');
+      row.className='cl-row';
+      row.innerHTML=`<span class="cl-t">${GT.fmt()}</span><span class="cl-spk">${agentKey.slice(0,4)}:</span><span class="cl-msg">${preview}</span>`;
+      log.appendChild(row);
+      log.scrollTop=log.scrollHeight;
+    }
+    // 确保预览展开
+    const prev = existing.querySelector('.cc-preview');
+    if(prev) prev.classList.add('open');
+    toast('新消息追加：'+srcFull.slice(0,16), 'info');
+    return;
+  }
+  // ---- 新建卡片 ----
   const card = document.createElement('div');
   card.className = 'cc' + (isConfirmed?' warn':isSuspected?' warn':'');
   card.style.borderLeft = isConfirmed?'2px solid var(--red)':isSuspected?'2px solid var(--amber)':'';
   card.dataset.cfId = id;
+  card.dataset.agent = agentKey;
   card.innerHTML = `
     <div class="cc-row" onclick="cycleCC(this)">
       <div class="cc-av" style="font-size:8px;border-color:${isConfirmed?'var(--red)':isSuspected?'var(--amber)':'var(--border)'}">?</div>
-      <div class="cc-name" style="font-size:10px">${src.slice(0,20)}</div>
+      <div class="cc-name" style="font-size:10px">${srcFull.slice(0,20)}</div>
       <div class="cc-stat" style="color:${isConfirmed?'var(--red)':isSuspected?'var(--amber)':'var(--text-dim)'}">● 已接</div>
       <button class="cc-tog" onclick="event.stopPropagation();cycleCC(this.closest('.cc').querySelector('.cc-row'))">▼</button>
     </div>
@@ -1261,7 +1314,7 @@ function cfAccept(id){
       </div>
     </div>`;
   scroll.appendChild(card);
-  toast('已接取：'+src.slice(0,16), 'info');
+  toast('已接取：'+srcFull.slice(0,16), 'info');
 }
 
 function cfIgnore(id){
@@ -1368,6 +1421,174 @@ function addMail(from, subj, bodyHtml, type='normal'){
 }
 
 updateMailBadge();
+
+// ============================================================
+// 支援图标拖拽吸附到事件节点
+// ============================================================
+const SUP_LABELS = { medical:'◈ 医疗待命', armed:'◈ 武装支援', cogn:'◈ 认知防护', intel:'◈ 情报支援' };
+const SUP_BORDER = { medical:'#2a6a4a', armed:'#4a1a1a', cogn:'#2a2a6a', intel:'#3a2a5a' };
+const SUP_COLOR  = { medical:'#6aee9a', armed:'#ff8a8a', cogn:'#8ab4ff', intel:'#d08aff' };
+let dragSupType = null;
+
+document.querySelectorAll('.sup-drag').forEach(icon=>{
+  icon.addEventListener('dragstart', e=>{ dragSupType=icon.dataset.stype; e.dataTransfer.effectAllowed='copy'; });
+  icon.addEventListener('dragend', ()=>{ dragSupType=null; });
+});
+
+function bindSupDrop(nd){
+  nd.addEventListener('dragover', e=>{ if(dragSupType){ e.preventDefault(); nd.style.outline='1px solid var(--green)'; } });
+  nd.addEventListener('dragleave', ()=>{ nd.style.outline=''; });
+  nd.addEventListener('drop', e=>{
+    e.preventDefault(); nd.style.outline='';
+    if(!dragSupType) return;
+    const stype=dragSupType; dragSupType=null;
+    const evId=nd.id;
+    if(document.querySelector(`.sup-card[data-ev="${evId}"][data-stype="${stype}"]`)){
+      toast('已派遣该类型支援','warn'); return;
+    }
+    const nx=parseFloat(nd.style.left)+nd.offsetWidth+12;
+    const ny=parseFloat(nd.style.top)-10;
+    const inner=document.getElementById('map-inner');
+    const sc=document.createElement('div');
+    sc.className='sup-card'; sc.dataset.ev=evId; sc.dataset.stype=stype;
+    sc.style.left=nx+'px'; sc.style.top=ny+'px';
+    sc.style.borderColor=SUP_BORDER[stype];
+    const evName=nd.querySelector('.n-name')?.textContent||'';
+    // 情报支援：显示搜索倒计时
+    if(stype==='intel'){
+      let searchSec=120+Math.floor(Math.random()*180); // 120-300游戏分钟
+      sc.innerHTML=`<div class="sc-type" style="color:${SUP_COLOR[stype]}">${SUP_LABELS[stype]}</div><div class="sc-eta" style="color:${SUP_COLOR[stype]}" id="intel-eta-${evId}">搜索中 ${searchSec}m</div><div class="sc-status">→ ${evName}</div>`;
+      inner.appendChild(sc);
+      // 倒计时：用GT.scheduleAt
+      const finMin=GT.toMin()+searchSec;
+      const finD=Math.floor(finMin/1440),finH=Math.floor((finMin%1440)/60),finM=finMin%60;
+      GT.scheduleAt({atDay:finD,atHour:finH,atMin:finM},()=>{
+        const etaEl=document.getElementById('intel-eta-'+evId);
+        if(etaEl){etaEl.textContent='检索完成';etaEl.style.color='var(--green)';}
+        addCommFeed('法泽尔 / 情报部门', `关于"${evName}"的情报检索已完成，请接取查看结果`, 'suspected');
+        bulletin(`情报检索完成 — ${evName}`, '法泽尔已发送检索结果', 'warn', 6000);
+      });
+    } else {
+      sc.innerHTML=`<div class="sc-type" style="color:${SUP_COLOR[stype]}">${SUP_LABELS[stype]}</div><div class="sc-eta" style="color:${SUP_COLOR[stype]}">已派遣</div><div class="sc-status">→ ${evName}</div>`;
+      inner.appendChild(sc);
+    }
+    sc.addEventListener('mousedown',e2=>{e2.stopPropagation();sd={el:sc,sx:e2.clientX,sy:e2.clientY,ox:parseFloat(sc.style.left),oy:parseFloat(sc.style.top)};});
+    requestAnimationFrame(drawLinks);
+    toast('已派遣：'+SUP_LABELS[stype]+' → '+evName,'info');
+  });
+}
+document.querySelectorAll('.node-ev, .node-ev-hi').forEach(nd=>bindSupDrop(nd));
+
+// ============================================================
+// requestStatus 防重复 + 调查员主动结案请求
+// ============================================================
+const pendingStatusReq = {}; // { agCode: { requestedAt, dueMin } }
+
+function requestStatus(agCode, agName){
+  // 查重：已有进行中的请求
+  if(pendingStatusReq[agCode]){
+    const p=pendingStatusReq[agCode];
+    const remain=p.dueMin-GT.toMin();
+    if(remain>0){
+      toast(`已向 ${agName} 发送请求，预计还需 ${remain} 分钟回报`,'warn',3000);
+      return;
+    }
+  }
+  const del=30+Math.floor(Math.random()*60);
+  const dueMin=GT.toMin()+del;
+  pendingStatusReq[agCode]={ requestedAt:GT.fmt(), dueMin };
+  const tD=Math.floor(dueMin/1440),tH=Math.floor((dueMin%1440)/60),tM=dueMin%60;
+  GT.scheduleAt({atDay:tD,atHour:tH,atMin:tM},()=>{
+    delete pendingStatusReq[agCode];
+    // 更新沉默计时器的 lastContact
+    if(INVESTIGATOR_SILENCE[agCode]){
+      INVESTIGATOR_SILENCE[agCode].lastContact=GT.toMin();
+      INVESTIGATOR_SILENCE[agCode].warned=false;
+      INVESTIGATOR_SILENCE[agCode].crited=false;
+      setSilenceIcon(AG_NODE[agCode],'none');
+    }
+    queueCall({
+      id:'status-'+agCode+'-'+Date.now(), agCode,
+      report:agCode==='AV'?'接线员，应你请求，我来回报。\n\n目前现场暂无新进展，一切尚在掌控中。'
+            :agCode==='LZ'?'……我在。\n\n没有新情况。'
+            :agCode==='RF'?'福斯回报。目前无变化。'
+            :'周磊报告，现场无异常。',
+      options:[
+        {text:'已收到，继续保持',reply:'明白。',type:'normal'},
+        {text:'需要支援吗？',reply:'暂时不需要，我会联系你。',type:'normal'}
+      ]
+    });
+  });
+  toast('已向 '+agName+' 发送状态请求，预计 '+del+' 分钟后回报','info',4000);
+}
+
+// ---- 事件自动结案请求 ----
+// 每个活跃事件记录无进展时间，超时后调查员主动发起结案/移交请求
+const EVENT_CLOSURE = {
+  'n-e027':{ name:'北区X-17异响', noProgressMin:0, threshold:480, requested:false },  // 已转接，8h后
+};
+function checkEventClosure(){
+  const now=GT.toMin();
+  Object.entries(EVENT_CLOSURE).forEach(([nodeId,ev])=>{
+    if(ev.requested) return;
+    ev.noProgressMin+=60; // 每次slowCheck+60分钟
+    if(ev.noProgressMin < ev.threshold) return;
+    ev.requested=true;
+    // 来电：调查员（或系统）发起结案申请
+    const cfId='closure-'+nodeId;
+    const feed=document.getElementById('comm-feed');
+    if(!feed) return;
+    cfSeq++;
+    const id='cf'+cfSeq;
+    const item=document.createElement('div');
+    item.className='cf-item suspected'; item.dataset.id=id;
+    item.innerHTML=`
+      <div class="cf-flag suspected" title="结案/移交申请">↗</div>
+      <div class="cf-body">
+        <div class="cf-src">系统 — ${ev.name} 结案申请 <span class="cf-time">${GT.fmt()}</span></div>
+        <div class="cf-preview">事件长时间无新进展，建议结案或移交常规监控</div>
+      </div>
+      <div class="cf-acts">
+        <button class="cf-btn acc" onclick="approveEventClosure('${nodeId}','${ev.name}','${id}')">批准结案</button>
+        <button class="cf-btn ign" onclick="transferEventMonitor('${nodeId}','${ev.name}','${id}')">移交监控</button>
+      </div>`;
+    feed.insertBefore(item,feed.firstChild);
+    updateCFCount();
+    bulletin(`结案申请 — ${ev.name}`, '该事件长时间无新进展，等待你的处置决定', 'warn', 8000);
+  });
+}
+
+function approveEventClosure(nodeId, evName, cfId){
+  const item=document.querySelector(`.cf-item[data-id="${cfId}"]`);
+  if(item) item.classList.add('accepted');
+  updateCFCount();
+  // 找事件卡结案
+  const evCard=document.querySelector(`.ev[data-node-id="${nodeId}"]`);
+  if(evCard) resolveEvent(evCard, nodeId);
+  else toast('事件已结案：'+evName,'info');
+}
+
+function transferEventMonitor(nodeId, evName, cfId){
+  const item=document.querySelector(`.cf-item[data-id="${cfId}"]`);
+  if(item) item.classList.add('accepted');
+  updateCFCount();
+  // 事件变为"监控中"状态
+  document.querySelectorAll('.ev').forEach(card=>{
+    if(card.dataset.nodeId===nodeId){
+      const badge=card.querySelector('.evb');
+      if(badge){badge.style.borderStyle='dashed';badge.title='移交常规监控';}
+      const ag=card.querySelector('.ev-ag');
+      if(ag){ag.textContent='▷ 常规监控';ag.style.color='var(--text-dim)';}
+    }
+  });
+  toast(evName+' 已移交常规监控','info');
+}
+
+// 将 checkEventClosure 接入 _slowCheck
+const _origSlowCheck = GT._slowCheck.bind(GT);
+GT._slowCheck = function(){ _origSlowCheck(); checkEventClosure(); };
+
+
 const STATUS_MAP={
   '提交':{cls:'pend',txt:'待审批'},
   '标记':{cls:'flag',txt:'已标记'},
